@@ -89,16 +89,8 @@ const ImageGenerator = {
         dropzone.addEventListener('drop', (e) => {
             e.preventDefault();
             dropzone.classList.remove('drag-over');
-            // Check if it's a generated image dragged from the grid
+            // Check if a URL was dropped (e.g. from external source)
             const textData = e.dataTransfer.getData('text/plain') || '';
-            if (textData.startsWith('gen-image:')) {
-                const url = textData.split(':').slice(2).join(':');
-                if (url) {
-                    this.addRefFromUrl(url);
-                    return;
-                }
-            }
-            // Check if it's a URL
             if (textData.startsWith('http')) {
                 this.addRefFromUrl(textData);
                 return;
@@ -510,20 +502,10 @@ const ImageGenerator = {
         this.generatedImages.forEach((img, idx) => {
             const card = document.createElement('div');
             card.className = 'image-card';
-            card.draggable = true;
-            card.dataset.genIdx = idx;
-            card.addEventListener('dragstart', (e) => {
-                e.dataTransfer.setData('text/plain', `gen-image:${idx}:${img.url}`);
-                e.dataTransfer.effectAllowed = 'copy';
-                card.classList.add('dragging');
-            });
-            card.addEventListener('dragend', () => {
-                card.classList.remove('dragging');
-            });
             const costLabel = img.cost ? `$${img.cost.toFixed(3)}` : '';
             const isFav = img.starred ? 'starred' : '';
             card.innerHTML = `
-                <img src="${img.url}" alt="Generated" loading="lazy" draggable="false">
+                <img src="${img.url}" alt="Generated" loading="lazy">
                 ${costLabel ? `<span class="card-cost">${costLabel}</span>` : ''}
                 <div class="card-actions-right">
                     <button class="btn-card ${isFav}" title="Favorite" data-action="star" data-idx="${idx}">☆</button>
@@ -531,6 +513,7 @@ const ImageGenerator = {
                     <button class="btn-card" title="Delete" data-action="delete" data-idx="${idx}">🗑</button>
                 </div>
                 <div class="card-actions-left">
+                    <button class="btn-card" title="Use as Reference" data-action="add-ref" data-idx="${idx}">＋</button>
                     <button class="btn-card" title="Send to Video" data-action="to-video" data-idx="${idx}">▶</button>
                     <button class="btn-card" title="Edit / Remix" data-action="remix" data-idx="${idx}">🎬</button>
                 </div>
@@ -544,6 +527,7 @@ const ImageGenerator = {
                     else if (action === 'star') this.toggleStar(idx);
                     else if (action === 'to-video') this.sendToVideo(idx);
                     else if (action === 'remix') this.remixImage(idx);
+                    else if (action === 'add-ref') this.addRefFromUrl(this.generatedImages[idx].url);
                     return;
                 }
                 this.openViewer(idx);
