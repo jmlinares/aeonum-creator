@@ -134,12 +134,18 @@ const API = {
             }
 
             const data = await response.json();
-            console.log(`[Poll ${requestId}] status: ${data.status}`, data);
+            const status = data.status || data.data?.status;
+            console.log(`[Poll ${requestId}] status: ${status}`, data);
 
-            if (data.status === 'completed') {
+            if (status === 'completed' || status === 'succeeded') {
                 return data;
-            } else if (data.status === 'failed' || data.status === 'error') {
+            } else if (status === 'failed' || status === 'error') {
                 throw new Error(`Generation failed: ${data.error || data.data?.error || 'Unknown error'}`);
+            }
+            // Also check if outputs are already available (some models skip status)
+            const outputs = data.data?.outputs || data.data?.output || data.outputs || data.output;
+            if (outputs && (Array.isArray(outputs) ? outputs.length > 0 : outputs)) {
+                return data;
             }
 
             // Wait 2 seconds before next poll

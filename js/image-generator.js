@@ -327,8 +327,7 @@ const ImageGenerator = {
 
                     if (!requestId) {
                         // Sync mode - immediate result
-                        const outputs = submitResult.data?.outputs || submitResult.outputs ||
-                                        (submitResult.data?.output ? [].concat(submitResult.data.output) : []);
+                        const outputs = this.extractOutputs(submitResult);
                         for (const url of outputs) {
                             this.addToHistory(url, fullPrompt, modelId, size, resolution);
                         }
@@ -345,8 +344,7 @@ const ImageGenerator = {
                         this.updateGeneratingTime(placeholderId, elapsed);
                     });
 
-                    const outputs = result.data?.outputs || result.outputs ||
-                                    (result.data?.output ? [].concat(result.data.output) : []);
+                    const outputs = this.extractOutputs(result);
                     for (const url of outputs) {
                         this.addToHistory(url, fullPrompt, modelId, size, resolution);
                     }
@@ -369,6 +367,13 @@ const ImageGenerator = {
             btn.classList.remove('cancel-mode');
             if (window.refreshBalance) window.refreshBalance();
         }
+    },
+
+    extractOutputs(result) {
+        // WaveSpeed responses can be { data: { outputs: [...] } } or { data: { data: { outputs: [...] } } }
+        const d = result.data || result;
+        const outputs = d.outputs || d.output || d.data?.outputs || d.data?.output || [];
+        return Array.isArray(outputs) ? outputs : [outputs];
     },
 
     cancelGeneration() {

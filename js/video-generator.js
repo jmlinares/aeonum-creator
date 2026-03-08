@@ -208,8 +208,9 @@ const VideoGenerator = {
                 this.updateGeneratingTime(placeholderId, elapsed);
             });
 
-            const outputs = result.data?.outputs || result.outputs ||
-                            (result.data?.output ? [].concat(result.data.output) : []);
+            const d = result.data || result;
+            const rawOutputs = d.outputs || d.output || d.data?.outputs || d.data?.output || [];
+            const outputs = Array.isArray(rawOutputs) ? rawOutputs : [rawOutputs];
             for (const url of outputs) {
                 const cost = API.getVideoCost(modelId, duration, true);
                 const item = {
