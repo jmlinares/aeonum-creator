@@ -58,7 +58,11 @@
                 <!-- Prompt -->
                 <div class="panel-section">
                     <label class="section-label">Prompt</label>
-                    <textarea class="prompt-input" id="imgPrompt" placeholder="Describe what you want to generate..."></textarea>
+                    <div class="prompt-wrapper" style="position:relative;">
+                        <textarea class="prompt-input" id="imgPrompt" placeholder="Describe what you want to generate..."></textarea>
+                        <div class="prompt-highlight" id="imgPromptHighlight"></div>
+                        <div class="mention-dropdown hidden" id="mentionDropdown"></div>
+                    </div>
                     <div class="prompt-actions">
                         <button class="btn-sm" id="btnImgClear">Clear</button>
                         <button class="btn-sm btn-accent" id="btnImgEnhance">Enhance</button>

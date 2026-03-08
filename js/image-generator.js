@@ -85,6 +85,41 @@ const ImageGenerator = {
             btn.classList.add('active');
         });
 
+        // Mention autocomplete
+        const promptInput = document.getElementById('imgPrompt');
+        const mentionDropdown = document.getElementById('mentionDropdown');
+        let mentionSelectedIdx = 0;
+
+        promptInput.addEventListener('input', () => {
+            this.updateMentionDropdown(promptInput, mentionDropdown);
+        });
+
+        promptInput.addEventListener('keydown', (e) => {
+            if (mentionDropdown.classList.contains('hidden')) return;
+            const items = mentionDropdown.querySelectorAll('.mention-item');
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                mentionSelectedIdx = Math.min(mentionSelectedIdx + 1, items.length - 1);
+                items.forEach((el, i) => el.classList.toggle('selected', i === mentionSelectedIdx));
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                mentionSelectedIdx = Math.max(mentionSelectedIdx - 1, 0);
+                items.forEach((el, i) => el.classList.toggle('selected', i === mentionSelectedIdx));
+            } else if (e.key === 'Enter' && items.length > 0) {
+                e.preventDefault();
+                items[mentionSelectedIdx]?.click();
+            } else if (e.key === 'Escape') {
+                mentionDropdown.classList.add('hidden');
+            }
+        });
+
+        // Hide dropdown when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!promptInput.contains(e.target) && !mentionDropdown.contains(e.target)) {
+                mentionDropdown.classList.add('hidden');
+            }
+        });
+
         // Image count slider
         document.getElementById('imgCount').addEventListener('input', (e) => {
             document.getElementById('imgCountVal').textContent = e.target.value;
@@ -312,6 +347,74 @@ const ImageGenerator = {
             });
             container.appendChild(thumb);
         });
+    },
+
+    getAllImageRefs() {
+        const refs = [];
+        // Character images
+        const charId = document.getElementById('imgCharacterSelect')?.value;
+        if (charId) {
+            const char = Characters.getById(charId);
+            if (char) {
+                const imgs = char.images && char.images.length > 0
+                    ? char.images
+                    : [char.faceImage, char.bodyImage].filter(Boolean);
+                imgs.forEach((url, i) => {
+                    refs.push({ label: `@img${i + 1}`, thumb: url, source: char.name });
+                });
+            }
+        }
+        // Omni reference images
+        this.refImages.forEach(img => {
+            refs.push({ label: img.label, thumb: img.dataUrl, source: 'Omni Ref' });
+        });
+        return refs;
+    },
+
+    updateMentionDropdown(textarea, dropdown) {
+        const val = textarea.value;
+        const pos = textarea.selectionStart;
+        // Find @ trigger before cursor
+        const before = val.slice(0, pos);
+        const atMatch = before.match(/@(\w*)$/);
+
+        if (!atMatch) {
+            dropdown.classList.add('hidden');
+            return;
+        }
+
+        const query = atMatch[1].toLowerCase();
+        const refs = this.getAllImageRefs();
+        const filtered = refs.filter(r => r.label.toLowerCase().includes('@' + query) || r.label.toLowerCase().startsWith('@' + query));
+
+        if (filtered.length === 0) {
+            dropdown.classList.add('hidden');
+            return;
+        }
+
+        dropdown.innerHTML = '';
+        filtered.forEach((ref, i) => {
+            const item = document.createElement('div');
+            item.className = 'mention-item' + (i === 0 ? ' selected' : '');
+            item.innerHTML = `
+                <img src="${ref.thumb}" alt="">
+                <span class="mention-label">${ref.label}</span>
+                <span style="color:var(--text-secondary);font-size:11px;">${ref.source}</span>
+            `;
+            item.addEventListener('click', () => {
+                // Replace @query with the full label
+                const start = pos - atMatch[0].length;
+                textarea.value = val.slice(0, start) + ref.label + ' ' + val.slice(pos);
+                textarea.selectionStart = textarea.selectionEnd = start + ref.label.length + 1;
+                textarea.focus();
+                dropdown.classList.add('hidden');
+            });
+            dropdown.appendChild(item);
+        });
+
+        // Reset selection
+        dropdown.querySelector('.mention-item')?.classList.add('selected');
+        dropdown.classList.remove('hidden');
     },
 
     enhancePrompt() {
