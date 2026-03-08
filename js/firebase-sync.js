@@ -128,12 +128,51 @@ const FirebaseSync = {
         }
     },
 
+    // ===== CHARACTER IMAGE UPLOAD =====
+
+    async uploadCharacterImage(dataUrl, charId, index) {
+        if (!this.initialized) return dataUrl;
+        try {
+            // Convert base64 dataUrl to blob
+            const response = await fetch(dataUrl);
+            const blob = await response.blob();
+            const ref = this.storage.ref(`characters/${charId}/img${index}.png`);
+            await ref.put(blob);
+            return await ref.getDownloadURL();
+        } catch (err) {
+            console.error('Firebase char image upload error:', err);
+            return dataUrl; // fallback
+        }
+    },
+
     // ===== FIRESTORE - CHARACTERS =====
 
     async saveCharacter(char) {
         if (!this.initialized) return;
         try {
-            await this.db.collection('characters').doc(char.id).set(char);
+            // Upload base64 images to Storage, replace with URLs
+            const uploadedImages = [];
+            for (let i = 0; i < (char.images || []).length; i++) {
+                const img = char.images[i];
+                if (img && img.startsWith('data:')) {
+                    const url = await this.uploadCharacterImage(img, char.id, i);
+                    uploadedImages.push(url);
+                } else {
+                    uploadedImages.push(img);
+                }
+            }
+            const charToSave = {
+                ...char,
+                images: uploadedImages,
+                faceImage: uploadedImages[0] || '',
+                bodyImage: uploadedImages[1] || ''
+            };
+            await this.db.collection('characters').doc(char.id).set(charToSave);
+
+            // Update in-memory with Firebase URLs
+            char.images = uploadedImages;
+            char.faceImage = uploadedImages[0] || '';
+            char.bodyImage = uploadedImages[1] || '';
         } catch (err) {
             console.error('Firestore save char error:', err);
         }

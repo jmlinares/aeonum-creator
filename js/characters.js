@@ -175,18 +175,50 @@ const Characters = {
         const name = document.getElementById('charName').value.trim();
         if (!name) return alert('Enter a character name');
 
-        const char = {
-            id: this.currentEditId || undefined,
-            name,
-            images: this.editImages.map(img => img.dataUrl),
-            faceImage: this.editImages[0]?.dataUrl || '',
-            bodyImage: this.editImages[1]?.dataUrl || ''
-        };
+        const saveBtn = document.getElementById('btnCharSave');
+        saveBtn.disabled = true;
+        saveBtn.textContent = 'Saving...';
 
-        this.save(char);
-        this.closeEditor();
-        this.renderGrid();
-        this.renderDropdown();
+        try {
+            const charId = this.currentEditId || Date.now().toString();
+
+            const char = {
+                id: charId,
+                name,
+                images: this.editImages.map(img => img.dataUrl),
+                faceImage: this.editImages[0]?.dataUrl || '',
+                bodyImage: this.editImages[1]?.dataUrl || ''
+            };
+
+            // Save to Firebase (uploads images to Storage, replaces base64 with URLs)
+            await FirebaseSync.saveCharacter(char);
+
+            // Now char.images contains Firebase URLs (not base64) — safe for localStorage
+            const chars = this.getAll();
+            if (this.currentEditId) {
+                const idx = chars.findIndex(c => c.id === charId);
+                if (idx >= 0) chars[idx] = char;
+                else chars.push(char);
+            } else {
+                chars.push(char);
+            }
+
+            try {
+                Storage.saveCharacters(chars);
+            } catch (e) {
+                console.warn('localStorage full, chars saved to Firebase only');
+            }
+
+            this.closeEditor();
+            this.renderGrid();
+            this.renderDropdown();
+        } catch (err) {
+            console.error('Error saving character:', err);
+            alert('Error saving character: ' + err.message);
+        } finally {
+            saveBtn.disabled = false;
+            saveBtn.textContent = 'Save';
+        }
     },
 
     deleteFromEditor() {

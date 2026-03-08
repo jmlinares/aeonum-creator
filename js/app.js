@@ -50,8 +50,14 @@ document.addEventListener('DOMContentLoaded', () => {
     FirebaseSync.init();
 
     // ===== INIT MODULES =====
-    Characters.renderDropdown();
-    Characters.renderGrid();
+    // Load characters from Firebase first, fallback to localStorage
+    FirebaseSync.loadCharacters().then(fbChars => {
+        if (fbChars && fbChars.length > 0) {
+            try { Storage.saveCharacters(fbChars); } catch (e) { /* localStorage may be full */ }
+        }
+        Characters.renderDropdown();
+        Characters.renderGrid();
+    });
     ImageGenerator.init();
     VideoGenerator.init();
     MetadataCleaner.init();
