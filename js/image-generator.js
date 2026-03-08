@@ -89,6 +89,21 @@ const ImageGenerator = {
         dropzone.addEventListener('drop', (e) => {
             e.preventDefault();
             dropzone.classList.remove('drag-over');
+            // Check if it's a generated image dragged from the grid
+            const genIdx = e.dataTransfer.getData('text/gen-image-idx');
+            if (genIdx !== '') {
+                const img = this.generatedImages[parseInt(genIdx)];
+                if (img) {
+                    this.addRefFromUrl(img.url);
+                    return;
+                }
+            }
+            // Check if it's a URL (e.g. dragged <img>)
+            const url = e.dataTransfer.getData('text/uri-list') || e.dataTransfer.getData('text/plain');
+            if (url && url.startsWith('http')) {
+                this.addRefFromUrl(url);
+                return;
+            }
             this.addRefImages(e.dataTransfer.files);
         });
         fileInput.addEventListener('change', (e) => {
@@ -235,6 +250,13 @@ const ImageGenerator = {
                 setTimeout(() => btn.textContent = 'Copy Prompt', 1500);
             }
         });
+    },
+
+    addRefFromUrl(url) {
+        if (this.refImages.length >= 14) return;
+        const idx = this.refImages.length + 1;
+        this.refImages.push({ file: null, dataUrl: url, label: `@img${idx}` });
+        this.renderRefPreviews();
     },
 
     async addRefImages(files) {
@@ -489,10 +511,16 @@ const ImageGenerator = {
         this.generatedImages.forEach((img, idx) => {
             const card = document.createElement('div');
             card.className = 'image-card';
+            card.draggable = true;
+            card.addEventListener('dragstart', (e) => {
+                e.dataTransfer.setData('text/gen-image-idx', idx.toString());
+                e.dataTransfer.setData('text/uri-list', img.url);
+                e.dataTransfer.effectAllowed = 'copy';
+            });
             const costLabel = img.cost ? `$${img.cost.toFixed(3)}` : '';
             const isFav = img.starred ? 'starred' : '';
             card.innerHTML = `
-                <img src="${img.url}" alt="Generated" loading="lazy">
+                <img src="${img.url}" alt="Generated" loading="lazy" draggable="false">
                 ${costLabel ? `<span class="card-cost">${costLabel}</span>` : ''}
                 <div class="card-actions-right">
                     <button class="btn-card ${isFav}" title="Favorite" data-action="star" data-idx="${idx}">☆</button>
