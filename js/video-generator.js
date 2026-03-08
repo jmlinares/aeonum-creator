@@ -1,0 +1,354 @@
+/* ========== VIDEO GENERATOR - ALL VIA WAVESPEED ========== */
+
+const VideoGenerator = {
+    currentMode: 'text-to-video',
+    sourceImageData: null, // base64 dataUrl for image-to-video
+    refImages: [], // for reference-to-video (up to 3)
+    generatedVideos: [],
+
+    async init() {
+        const firebaseVideos = await FirebaseSync.loadVideoHistory();
+        if (firebaseVideos.length > 0) {
+            this.generatedVideos = firebaseVideos;
+            Storage.set('video_history', firebaseVideos);
+        } else {
+            this.generatedVideos = Storage.getVideoHistory();
+        }
+        this.renderGrid();
+        this.loadModelState();
+        this.bindEvents();
+    },
+
+    loadModelState() {
+        const modelId = Storage.getSelectedVideoModel();
+        this.updateModelDisplay(modelId);
+    },
+
+    updateModelDisplay(modelId) {
+        const badge = document.getElementById('vidModelBadge');
+        const name = document.getElementById('vidModelName');
+
+        const models = {
+            'veo-3.1-text-to-video':       { badge: 'V3.1', name: 'Veo 3.1 - Text to Video' },
+            'veo-3.1-fast-text-to-video':   { badge: 'FAST', name: 'Veo 3.1 Fast - Text to Video' },
+            'veo-3.1-fast-image-to-video':  { badge: 'I2V',  name: 'Veo 3.1 Fast - Image to Video' },
+            'veo-3.1-reference-to-video':   { badge: 'REF',  name: 'Veo 3.1 - Reference to Video' },
+        };
+
+        const m = models[modelId] || models['veo-3.1-text-to-video'];
+        badge.textContent = m.badge;
+        name.textContent = m.name;
+    },
+
+    bindEvents() {
+        // Model change
+        document.getElementById('btnVidModelChange').addEventListener('click', () => {
+            const modal = document.getElementById('modalVidModel');
+            modal.classList.remove('hidden');
+            const currentModel = Storage.getSelectedVideoModel();
+            document.querySelectorAll('.model-option').forEach(opt => {
+                opt.classList.toggle('active', opt.dataset.model === currentModel);
+            });
+        });
+
+        document.getElementById('btnVidModelCancel').addEventListener('click', () => {
+            document.getElementById('modalVidModel').classList.add('hidden');
+        });
+
+        document.getElementById('btnVidModelSave').addEventListener('click', () => {
+            const active = document.querySelector('.model-option.active');
+            if (active) {
+                const modelId = active.dataset.model;
+                Storage.setSelectedVideoModel(modelId);
+                this.updateModelDisplay(modelId);
+                this.updateUIForModel(modelId);
+            }
+            document.getElementById('modalVidModel').classList.add('hidden');
+        });
+
+        // Model option clicks
+        document.querySelectorAll('.model-option').forEach(opt => {
+            opt.addEventListener('click', () => {
+                document.querySelectorAll('.model-option').forEach(o => o.classList.remove('active'));
+                opt.classList.add('active');
+            });
+        });
+
+        // Mode tabs
+        document.querySelectorAll('.mode-tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.mode-tab').forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                this.currentMode = tab.dataset.mode;
+
+                const sourceSection = document.getElementById('vidSourceImageSection');
+                if (this.currentMode === 'image-to-video' || this.currentMode === 'extend') {
+                    sourceSection.classList.remove('hidden');
+                } else {
+                    sourceSection.classList.add('hidden');
+                }
+            });
+        });
+
+        // Source image upload
+        const sourceDrop = document.getElementById('vidSourceDrop');
+        const sourceFile = document.getElementById('vidSourceFile');
+
+        sourceDrop.addEventListener('click', () => sourceFile.click());
+        sourceDrop.addEventListener('dragover', (e) => { e.preventDefault(); });
+        sourceDrop.addEventListener('drop', (e) => {
+            e.preventDefault();
+            if (e.dataTransfer.files[0]) this.setSourceImage(e.dataTransfer.files[0]);
+        });
+        sourceFile.addEventListener('change', (e) => {
+            if (e.target.files[0]) this.setSourceImage(e.target.files[0]);
+        });
+
+        document.getElementById('btnRemoveVidSource').addEventListener('click', () => {
+            this.sourceImageData = null;
+            document.getElementById('vidSourcePreview').style.display = 'none';
+            document.getElementById('vidSourceDrop').style.display = 'block';
+        });
+
+        // Prompt actions
+        document.getElementById('btnVidClear').addEventListener('click', () => {
+            document.getElementById('vidPrompt').value = '';
+        });
+        document.getElementById('btnVidEnhance').addEventListener('click', () => {
+            const ta = document.getElementById('vidPrompt');
+            if (ta.value.trim()) {
+                ta.value += '. Ultra-realistic handheld smartphone video. Vertical 9:16.';
+            }
+        });
+
+        // Negative prompt toggle
+        document.getElementById('vidNegPromptToggle').addEventListener('click', () => {
+            const ta = document.getElementById('vidNegPrompt');
+            ta.classList.toggle('hidden');
+            const label = document.getElementById('vidNegPromptToggle');
+            label.textContent = ta.classList.contains('hidden') ? 'Negative Prompt ▸' : 'Negative Prompt ▾';
+        });
+
+        // Generate
+        document.getElementById('btnVidGenerate').addEventListener('click', () => this.generate());
+    },
+
+    updateUIForModel(modelId) {
+        const sourceSection = document.getElementById('vidSourceImageSection');
+        const audioSection = document.getElementById('vidAudioSection');
+
+        // Image-to-video and reference models need source image section
+        if (modelId.includes('image-to-video') || modelId.includes('reference-to-video')) {
+            sourceSection.classList.remove('hidden');
+        } else {
+            sourceSection.classList.add('hidden');
+        }
+
+        // All Veo models support audio
+        audioSection.classList.remove('hidden');
+    },
+
+    async setSourceImage(file) {
+        const dataUrl = await API.fileToBase64(file);
+        this.sourceImageData = dataUrl;
+        document.getElementById('vidSourceImg').src = dataUrl;
+        document.getElementById('vidSourcePreview').style.display = 'block';
+        document.getElementById('vidSourceDrop').style.display = 'none';
+    },
+
+    async generate() {
+        const prompt = document.getElementById('vidPrompt').value.trim();
+        if (!prompt) return alert('Enter a video prompt');
+
+        const modelId = Storage.getSelectedVideoModel();
+        const aspect = document.getElementById('vidAspect').value;
+        const resolution = document.getElementById('vidResolution').value;
+        const duration = parseInt(document.getElementById('vidDuration').value);
+        const audio = document.getElementById('vidAudio')?.value?.trim() || '';
+        const negPrompt = document.getElementById('vidNegPrompt')?.value?.trim() || '';
+
+        const btn = document.getElementById('btnVidGenerate');
+        btn.disabled = true;
+        btn.textContent = 'Generating...';
+
+        const placeholderId = 'vidgen-' + Date.now();
+        this.addGeneratingCard(placeholderId);
+
+        try {
+            // Build params based on model type
+            const params = {
+                prompt: audio ? prompt + `\nSample Dialogue:\n${audio}` : prompt,
+                aspect_ratio: aspect,
+                duration: duration,
+                resolution: resolution,
+                generate_audio: true,
+            };
+
+            if (negPrompt) params.negative_prompt = negPrompt;
+
+            // Image-to-video: single image
+            if (modelId.includes('image-to-video') && this.sourceImageData) {
+                params.image = this.sourceImageData;
+            }
+
+            // Reference-to-video: images array
+            if (modelId.includes('reference-to-video') && this.sourceImageData) {
+                params.images = [this.sourceImageData];
+            }
+
+            const submitResult = await API.submit(modelId, params);
+            const requestId = submitResult.data?.id || submitResult.id;
+
+            if (!requestId) {
+                this.removeGeneratingCard(placeholderId);
+                throw new Error('No request ID returned');
+            }
+
+            const result = await API.poll(requestId, (elapsed) => {
+                this.updateGeneratingTime(placeholderId, elapsed);
+            });
+
+            const outputs = result.data?.outputs || result.outputs ||
+                            (result.data?.output ? [].concat(result.data.output) : []);
+            for (const url of outputs) {
+                const cost = API.getVideoCost(modelId, duration, true);
+                const item = {
+                    id: Date.now().toString() + Math.random().toString(36).slice(2, 6),
+                    url,
+                    prompt,
+                    model: modelId,
+                    duration,
+                    aspect,
+                    cost,
+                    timestamp: new Date().toISOString()
+                };
+
+                // Upload to Firebase Storage
+                const firebaseUrl = await FirebaseSync.uploadVideoFromUrl(url, `${item.id}.mp4`);
+                if (firebaseUrl !== url) item.url = firebaseUrl;
+
+                this.generatedVideos.unshift(item);
+                Storage.addVideoToHistory(item);
+                FirebaseSync.saveVideoRecord(item);
+            }
+
+            this.removeGeneratingCard(placeholderId);
+            this.renderGrid();
+        } catch (err) {
+            alert('Error: ' + err.message);
+            this.removeGeneratingCard(placeholderId);
+        } finally {
+            btn.disabled = false;
+            btn.textContent = 'Generate Video';
+            if (window.refreshBalance) window.refreshBalance();
+        }
+    },
+
+    addGeneratingCard(id) {
+        document.getElementById('vidEmptyState').style.display = 'none';
+        const grid = document.getElementById('videoGrid');
+        const card = document.createElement('div');
+        card.className = 'video-card generating';
+        card.id = id;
+        card.innerHTML = `
+            <div class="gen-progress">
+                <div class="gen-ring"></div>
+                <span class="gen-time">0.0s</span>
+                <span class="gen-turbo">⚡ Turbo On</span>
+            </div>
+        `;
+        grid.prepend(card);
+    },
+
+    updateGeneratingTime(id, elapsed) {
+        const card = document.getElementById(id);
+        if (card) {
+            const timeEl = card.querySelector('.gen-time');
+            if (timeEl) timeEl.textContent = elapsed + 's';
+        }
+    },
+
+    removeGeneratingCard(id) {
+        const card = document.getElementById(id);
+        if (card) card.remove();
+    },
+
+    renderGrid() {
+        const grid = document.getElementById('videoGrid');
+        const emptyState = document.getElementById('vidEmptyState');
+
+        const genCards = grid.querySelectorAll('.generating');
+        grid.innerHTML = '';
+        genCards.forEach(c => grid.appendChild(c));
+
+        if (this.generatedVideos.length === 0 && genCards.length === 0) {
+            emptyState.style.display = 'flex';
+            return;
+        }
+
+        emptyState.style.display = 'none';
+
+        this.generatedVideos.forEach((vid, idx) => {
+            const card = document.createElement('div');
+            card.className = 'video-card';
+
+            const isVideoUrl = vid.url && (vid.url.endsWith('.mp4') || vid.url.includes('video'));
+
+            const costLabel = vid.cost ? `$${vid.cost.toFixed(2)}` : '';
+            card.innerHTML = `
+                ${isVideoUrl
+                    ? `<video src="${vid.url}" preload="metadata" muted></video>`
+                    : `<img src="${vid.url}" alt="Video thumbnail">`
+                }
+                <span class="vid-duration">${vid.duration || '?'}s</span>
+                ${costLabel ? `<span class="card-cost">${costLabel}</span>` : ''}
+                <div class="vid-overlay">
+                    <button data-action="play" data-idx="${idx}">▶ Play</button>
+                    <button data-action="info" data-idx="${idx}">Info</button>
+                    <button data-action="download" data-idx="${idx}">⬇</button>
+                    <button data-action="delete" data-idx="${idx}">🗑</button>
+                </div>
+            `;
+
+            card.addEventListener('click', (e) => {
+                const actionBtn = e.target.closest('[data-action]');
+                if (!actionBtn) return;
+                const action = actionBtn.dataset.action;
+                const i = parseInt(actionBtn.dataset.idx);
+
+                if (action === 'play') this.playVideo(i);
+                else if (action === 'download') this.downloadVideo(i);
+                else if (action === 'delete') this.deleteVideo(i);
+                else if (action === 'info') alert(`Model: ${vid.model}\nPrompt: ${vid.prompt}`);
+            });
+
+            grid.appendChild(card);
+        });
+    },
+
+    playVideo(idx) {
+        const vid = this.generatedVideos[idx];
+        if (!vid) return;
+        window.open(vid.url, '_blank');
+    },
+
+    downloadVideo(idx) {
+        const vid = this.generatedVideos[idx];
+        if (!vid) return;
+        const a = document.createElement('a');
+        a.href = vid.url;
+        a.download = `video_${vid.id}.mp4`;
+        a.target = '_blank';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+    },
+
+    deleteVideo(idx) {
+        if (!confirm('Delete this video?')) return;
+        const removed = this.generatedVideos.splice(idx, 1)[0];
+        Storage.set('video_history', this.generatedVideos);
+        if (removed) FirebaseSync.deleteVideoRecord(removed.id);
+        this.renderGrid();
+    }
+};

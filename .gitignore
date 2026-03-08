@@ -1,0 +1,3 @@
+docs/Screenshot_*.jpg
+docs/*.json
+.claude/

@@ -1,0 +1,248 @@
+/* ========== IMAGE GRID ========== */
+.image-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 12px;
+}
+
+.image-card {
+    position: relative;
+    border-radius: var(--radius);
+    overflow: hidden;
+    cursor: pointer;
+    background: var(--bg-card);
+    transition: transform 0.2s;
+    aspect-ratio: auto;
+}
+
+.image-card:hover {
+    transform: scale(1.02);
+}
+
+.image-card img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+/* Card action buttons */
+.card-actions-right {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.card-actions-left {
+    position: absolute;
+    bottom: 8px;
+    left: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.image-card:hover .card-actions-right,
+.image-card:hover .card-actions-left {
+    opacity: 1;
+}
+
+.btn-card {
+    width: 34px;
+    height: 34px;
+    border: none;
+    background: rgba(140, 140, 140, 0.45);
+    color: white;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(4px);
+    transition: background 0.2s;
+}
+
+.btn-card:hover {
+    background: rgba(180, 180, 180, 0.6);
+}
+
+.btn-card.starred {
+    color: #eab308;
+}
+
+/* Cost badge */
+.card-cost {
+    position: absolute;
+    top: 6px;
+    left: 6px;
+    background: rgba(0, 0, 0, 0.7);
+    color: #22c55e;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 4px;
+    z-index: 2;
+}
+
+/* Generating card */
+.image-card.generating {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 250px;
+    background: var(--bg-card);
+}
+
+.gen-progress {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+}
+
+.gen-progress .gen-ring {
+    width: 60px;
+    height: 60px;
+    border: 3px solid var(--border);
+    border-top-color: var(--success);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.gen-progress .gen-time {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--success);
+}
+
+.gen-progress .gen-turbo {
+    font-size: 11px;
+    color: var(--success);
+}
+
+/* ========== CHARACTER GRID ========== */
+.character-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 16px;
+}
+
+.character-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+}
+
+.character-card .char-card-name {
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 12px;
+}
+
+.character-card .char-card-images {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+    min-height: 80px;
+}
+
+.character-card .char-card-images img {
+    width: 60px;
+    height: 80px;
+    object-fit: cover;
+    border-radius: 6px;
+}
+
+.char-card-body-icon {
+    width: 40px;
+    height: 80px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--blue);
+    font-size: 24px;
+}
+
+.character-card .btn-edit-char {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid var(--border);
+    background: var(--bg-hover);
+    color: var(--text-secondary);
+    border-radius: var(--radius);
+    cursor: pointer;
+    font-size: 13px;
+    transition: all 0.2s;
+}
+
+.character-card .btn-edit-char:hover {
+    background: var(--accent);
+    color: white;
+    border-color: var(--accent);
+}
+
+.new-character {
+    border: 2px dashed var(--border);
+    background: transparent;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    cursor: pointer;
+    min-height: 180px;
+    color: var(--text-muted);
+    font-size: 14px;
+    transition: all 0.2s;
+}
+
+.new-character:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+.plus-icon {
+    font-size: 36px;
+    line-height: 1;
+}
+
+/* ========== CHAR UPLOAD ZONE ========== */
+.char-upload-zone {
+    border: 2px dashed var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    text-align: center;
+    cursor: pointer;
+    color: var(--text-muted);
+    font-size: 13px;
+    transition: border-color 0.2s;
+}
+
+.char-upload-zone:hover { border-color: var(--accent); }
+
+.char-preview {
+    position: relative;
+    margin-top: 8px;
+    display: inline-block;
+}
+
+.char-preview img {
+    width: 80px;
+    height: 100px;
+    object-fit: cover;
+    border-radius: 6px;
+}
