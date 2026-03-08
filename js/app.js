@@ -94,12 +94,36 @@ document.addEventListener('DOMContentLoaded', () => {
     window.refreshBalance = refreshBalance;
 
     // ===== TRANSLATOR PANEL =====
+    let translatorDirection = 'es-en'; // 'es-en' or 'en-es'
+
+    function updateTranslatorUI() {
+        const isEsEn = translatorDirection === 'es-en';
+        document.getElementById('translatorTitle').textContent = isEsEn ? 'Traductor ES > EN' : 'Translator EN > ES';
+        document.getElementById('translatorInputLabel').textContent = isEsEn ? 'Texto en Español' : 'English Text';
+        document.getElementById('translatorOutputLabel').textContent = isEsEn ? 'English Translation' : 'Traducción en Español';
+        document.getElementById('translatorInput').placeholder = isEsEn ? 'Escribe aquí en español...' : 'Type here in English...';
+        document.getElementById('translatorOutput').placeholder = isEsEn ? 'Translation will appear here...' : 'La traducción aparecerá aquí...';
+        document.getElementById('btnTranslate').textContent = isEsEn ? 'Traducir' : 'Translate';
+        document.getElementById('btnToggleTranslator').textContent = isEsEn ? 'ES>EN' : 'EN>ES';
+    }
+
     document.getElementById('btnToggleTranslator').addEventListener('click', () => {
         document.getElementById('translatorPanel').classList.toggle('hidden');
     });
 
     document.getElementById('btnCloseTranslator').addEventListener('click', () => {
         document.getElementById('translatorPanel').classList.add('hidden');
+    });
+
+    document.getElementById('btnTranslatorSwap').addEventListener('click', () => {
+        translatorDirection = translatorDirection === 'es-en' ? 'en-es' : 'es-en';
+        // Swap input/output text
+        const input = document.getElementById('translatorInput');
+        const output = document.getElementById('translatorOutput');
+        const temp = output.value;
+        output.value = input.value;
+        input.value = temp;
+        updateTranslatorUI();
     });
 
     document.getElementById('btnTranslate').addEventListener('click', async () => {
@@ -112,8 +136,13 @@ document.addEventListener('DOMContentLoaded', () => {
         const btn = document.getElementById('btnTranslate');
         const output = document.getElementById('translatorOutput');
         btn.disabled = true;
-        btn.textContent = 'Traduciendo...';
+        btn.textContent = translatorDirection === 'es-en' ? 'Traduciendo...' : 'Translating...';
         output.value = '';
+
+        const isEsEn = translatorDirection === 'es-en';
+        const prompt = isEsEn
+            ? `Translate the following Spanish text to English. Return ONLY the translation, no explanations or notes:\n\n${input}`
+            : `Translate the following English text to Spanish. Return ONLY the translation, no explanations or notes:\n\n${input}`;
 
         try {
             const response = await fetch('https://api.anthropic.com/v1/messages', {
@@ -127,10 +156,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 body: JSON.stringify({
                     model: 'claude-haiku-4-5-20251001',
                     max_tokens: 4096,
-                    messages: [{
-                        role: 'user',
-                        content: `Translate the following Spanish text to English. Return ONLY the translation, no explanations or notes:\n\n${input}`
-                    }]
+                    messages: [{ role: 'user', content: prompt }]
                 })
             });
 
@@ -146,7 +172,7 @@ document.addEventListener('DOMContentLoaded', () => {
             alert('Translation error: ' + err.message);
         } finally {
             btn.disabled = false;
-            btn.textContent = 'Traducir';
+            btn.textContent = isEsEn ? 'Traducir' : 'Translate';
         }
     });
 

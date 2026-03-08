@@ -236,6 +236,13 @@ a:hover { text-decoration: underline; }
     cursor: default;
 }
 
+.translator-swap {
+    align-self: center;
+    margin-bottom: 8px;
+    cursor: pointer;
+    font-size: 13px;
+}
+
 .translator-btn {
     margin-top: 8px;
     margin-bottom: 4px;

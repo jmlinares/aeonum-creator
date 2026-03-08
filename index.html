@@ -511,14 +511,15 @@
     <!-- Translator Panel (right side) -->
     <div class="translator-panel hidden" id="translatorPanel">
         <div class="translator-header">
-            <span class="translator-title">Traductor ES > EN</span>
+            <span class="translator-title" id="translatorTitle">Traductor ES > EN</span>
             <button class="btn-close-translator" id="btnCloseTranslator">✕</button>
         </div>
         <div class="translator-body">
-            <label class="section-label">Texto en Espanol</label>
-            <textarea class="prompt-input translator-input" id="translatorInput" placeholder="Escribe aqui en espanol..."></textarea>
+            <button class="btn-sm translator-swap" id="btnTranslatorSwap" title="Swap direction">⇄ Swap</button>
+            <label class="section-label" id="translatorInputLabel">Texto en Español</label>
+            <textarea class="prompt-input translator-input" id="translatorInput" placeholder="Escribe aquí en español..."></textarea>
             <button class="btn-generate translator-btn" id="btnTranslate">Traducir</button>
-            <label class="section-label" style="margin-top:12px;">English Translation</label>
+            <label class="section-label" style="margin-top:12px;" id="translatorOutputLabel">English Translation</label>
             <textarea class="prompt-input translator-output" id="translatorOutput" placeholder="Translation will appear here..." readonly></textarea>
             <div class="translator-actions">
                 <button class="btn-sm" id="btnTranslatorCopy" title="Copy translation">Copy</button>
