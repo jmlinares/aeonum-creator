@@ -90,18 +90,17 @@ const ImageGenerator = {
             e.preventDefault();
             dropzone.classList.remove('drag-over');
             // Check if it's a generated image dragged from the grid
-            const genIdx = e.dataTransfer.getData('text/gen-image-idx');
-            if (genIdx !== '') {
-                const img = this.generatedImages[parseInt(genIdx)];
-                if (img) {
-                    this.addRefFromUrl(img.url);
+            const textData = e.dataTransfer.getData('text/plain') || '';
+            if (textData.startsWith('gen-image:')) {
+                const url = textData.split(':').slice(2).join(':');
+                if (url) {
+                    this.addRefFromUrl(url);
                     return;
                 }
             }
-            // Check if it's a URL (e.g. dragged <img>)
-            const url = e.dataTransfer.getData('text/uri-list') || e.dataTransfer.getData('text/plain');
-            if (url && url.startsWith('http')) {
-                this.addRefFromUrl(url);
+            // Check if it's a URL
+            if (textData.startsWith('http')) {
+                this.addRefFromUrl(textData);
                 return;
             }
             this.addRefImages(e.dataTransfer.files);
@@ -512,10 +511,14 @@ const ImageGenerator = {
             const card = document.createElement('div');
             card.className = 'image-card';
             card.draggable = true;
+            card.dataset.genIdx = idx;
             card.addEventListener('dragstart', (e) => {
-                e.dataTransfer.setData('text/gen-image-idx', idx.toString());
-                e.dataTransfer.setData('text/uri-list', img.url);
+                e.dataTransfer.setData('text/plain', `gen-image:${idx}:${img.url}`);
                 e.dataTransfer.effectAllowed = 'copy';
+                card.classList.add('dragging');
+            });
+            card.addEventListener('dragend', () => {
+                card.classList.remove('dragging');
             });
             const costLabel = img.cost ? `$${img.cost.toFixed(3)}` : '';
             const isFav = img.starred ? 'starred' : '';
