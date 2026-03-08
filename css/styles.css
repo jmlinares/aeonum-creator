@@ -1006,6 +1006,14 @@ a:hover { text-decoration: underline; }
     border-radius: var(--radius);
 }
 
+/* Cancel generation button */
+.btn-generate.cancel-mode {
+    background: linear-gradient(135deg, #991b1b, #ef4444) !important;
+}
+.btn-generate.cancel-mode:hover {
+    background: linear-gradient(135deg, #7f1d1d, #dc2626) !important;
+}
+
 /* Collapsible */
 .collapsible .hidden {
     display: none;

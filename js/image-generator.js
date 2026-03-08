@@ -4,6 +4,8 @@ const ImageGenerator = {
     refImages: [], // { file, dataUrl, label }
     generatedImages: [], // from history
     currentViewIndex: -1,
+    isGenerating: false,
+    activeRequestIds: [], // track polling request IDs for cancellation
 
     async init() {
         // Try loading from Firebase first, fallback to localStorage
@@ -134,8 +136,14 @@ const ImageGenerator = {
             Characters.openEditor(null);
         });
 
-        // Generate
-        document.getElementById('btnImgGenerate').addEventListener('click', () => this.generate());
+        // Generate / Cancel
+        document.getElementById('btnImgGenerate').addEventListener('click', () => {
+            if (this.isGenerating) {
+                this.cancelGeneration();
+            } else {
+                this.generate();
+            }
+        });
 
         // Sub-tabs
         document.querySelectorAll('#image-generator .sub-tab').forEach(tab => {
@@ -260,11 +268,15 @@ const ImageGenerator = {
         }
 
         const btn = document.getElementById('btnImgGenerate');
-        btn.disabled = true;
-        btn.textContent = 'Generating...';
+        this.isGenerating = true;
+        this.activeRequestIds = [];
+        btn.textContent = 'Cancel';
+        btn.classList.add('cancel-mode');
 
         try {
             for (let i = 0; i < count; i++) {
+                if (!this.isGenerating) break; // cancelled
+
                 const placeholderId = 'gen-' + Date.now() + '-' + i;
                 this.addGeneratingCard(placeholderId);
 
@@ -325,6 +337,9 @@ const ImageGenerator = {
                         continue;
                     }
 
+                    // Track for cancellation
+                    this.activeRequestIds.push(requestId);
+
                     // Poll for result
                     const result = await API.poll(requestId, (elapsed) => {
                         this.updateGeneratingTime(placeholderId, elapsed);
@@ -339,15 +354,35 @@ const ImageGenerator = {
                     this.renderGrid();
                 } catch (err) {
                     this.removeGeneratingCard(placeholderId);
+                    if (err.message === 'CANCELLED') continue;
                     throw err;
                 }
             }
         } catch (err) {
-            alert('Error: ' + err.message);
+            if (err.message !== 'CANCELLED') {
+                alert('Error: ' + err.message);
+            }
         } finally {
-            btn.disabled = false;
+            this.isGenerating = false;
+            this.activeRequestIds = [];
             btn.textContent = 'Generate Image';
+            btn.classList.remove('cancel-mode');
             if (window.refreshBalance) window.refreshBalance();
+        }
+    },
+
+    cancelGeneration() {
+        this.isGenerating = false;
+        // Cancel all active polling requests
+        for (const reqId of this.activeRequestIds) {
+            API.cancelPolling(reqId);
+        }
+        this.activeRequestIds = [];
+        // Remove all generating cards
+        document.querySelectorAll('.image-card.generating').forEach(c => c.remove());
+        // Check if grid is empty
+        if (this.generatedImages.length === 0) {
+            document.getElementById('imgEmptyState').style.display = 'flex';
         }
     },
 

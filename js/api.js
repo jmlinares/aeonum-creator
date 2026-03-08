@@ -92,12 +92,25 @@ const API = {
     },
 
     // ========== POLL FOR RESULT ==========
+    _cancelledRequests: new Set(),
+
+    cancelPolling(requestId) {
+        if (requestId) {
+            this._cancelledRequests.add(requestId);
+        }
+    },
+
     async poll(requestId, onProgress) {
         const apiKey = Storage.getWavespeedKey();
         const url = `${this.WAVESPEED_BASE}/predictions/${requestId}/result`;
         const startTime = Date.now();
 
         while (true) {
+            if (this._cancelledRequests.has(requestId)) {
+                this._cancelledRequests.delete(requestId);
+                throw new Error('CANCELLED');
+            }
+
             const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
             if (onProgress) onProgress(elapsed);
 
