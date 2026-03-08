@@ -211,6 +211,30 @@ const ImageGenerator = {
         document.getElementById('btnViewerPrev').addEventListener('click', () => this.viewPrev());
         document.getElementById('btnViewerNext').addEventListener('click', () => this.viewNext());
         document.getElementById('btnReuseSettings').addEventListener('click', () => this.reuseSettings());
+        document.getElementById('btnViewerDownload').addEventListener('click', () => {
+            this.downloadImage(this.currentViewIndex);
+        });
+        document.getElementById('btnViewerSendVideo').addEventListener('click', () => {
+            this.sendToVideo(this.currentViewIndex);
+            document.getElementById('modalImageViewer').classList.add('hidden');
+        });
+        document.getElementById('btnViewerRemix').addEventListener('click', () => {
+            this.remixImage(this.currentViewIndex);
+            document.getElementById('modalImageViewer').classList.add('hidden');
+        });
+        document.getElementById('btnViewerDelete').addEventListener('click', () => {
+            this.deleteImage(this.currentViewIndex);
+            document.getElementById('modalImageViewer').classList.add('hidden');
+        });
+        document.getElementById('btnUseImage').addEventListener('click', () => {
+            const img = this.generatedImages[this.currentViewIndex];
+            if (img && img.prompt) {
+                navigator.clipboard.writeText(img.prompt);
+                const btn = document.getElementById('btnUseImage');
+                btn.textContent = 'Copied!';
+                setTimeout(() => btn.textContent = 'Copy Prompt', 1500);
+            }
+        });
     },
 
     async addRefImages(files) {

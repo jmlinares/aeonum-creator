@@ -451,18 +451,18 @@
             </div>
             <div class="viewer-sidebar">
                 <div class="viewer-buttons">
-                    <button class="btn-sm">Move To Albums</button>
-                    <button class="btn-sm">Download As ▾</button>
+                    <button class="btn-sm" id="btnViewerDownload">Download PNG</button>
+                    <button class="btn-sm" id="btnViewerSendVideo">Send to Video</button>
                 </div>
                 <div class="viewer-buttons">
-                    <button class="btn-sm btn-publish">Publish</button>
-                    <button class="btn-sm">Share</button>
+                    <button class="btn-sm" id="btnViewerRemix">Remix</button>
+                    <button class="btn-sm" id="btnViewerDelete">Delete</button>
                 </div>
                 <details class="viewer-details" open>
                     <summary>Generation Details</summary>
                     <div class="viewer-detail-actions">
                         <button class="btn-sm" id="btnReuseSettings">Reuse Settings</button>
-                        <button class="btn-sm" id="btnUseImage">Use Image ▾</button>
+                        <button class="btn-sm" id="btnUseImage">Copy Prompt</button>
                     </div>
                     <div class="detail-row">
                         <span>Model:</span>
