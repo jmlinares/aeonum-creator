@@ -149,6 +149,9 @@ const ImageGenerator = {
             } else {
                 info.style.display = 'none';
             }
+            // Re-label omni references to account for character images offset
+            this.relabelRefImages();
+            this.renderRefPreviews();
         });
 
         // Quick add character
@@ -257,10 +260,26 @@ const ImageGenerator = {
         });
     },
 
+    getCharImageCount() {
+        const charId = document.getElementById('imgCharacterSelect')?.value;
+        if (!charId) return 0;
+        const char = Characters.getById(charId);
+        if (!char) return 0;
+        const imgs = char.images || [];
+        return imgs.length > 0 ? imgs.length : [char.faceImage, char.bodyImage].filter(Boolean).length;
+    },
+
+    relabelRefImages() {
+        const offset = this.getCharImageCount();
+        this.refImages.forEach((img, i) => {
+            img.label = `@img${offset + i + 1}`;
+        });
+    },
+
     addRefFromUrl(url) {
         if (this.refImages.length >= 14) return;
-        const idx = this.refImages.length + 1;
-        this.refImages.push({ file: null, dataUrl: url, label: `@img${idx}` });
+        this.refImages.push({ file: null, dataUrl: url, label: '' });
+        this.relabelRefImages();
         this.renderRefPreviews();
     },
 
@@ -268,9 +287,9 @@ const ImageGenerator = {
         for (const file of files) {
             if (this.refImages.length >= 14) break;
             const dataUrl = await API.fileToBase64(file);
-            const idx = this.refImages.length + 1;
-            this.refImages.push({ file, dataUrl, label: `@img${idx}` });
+            this.refImages.push({ file, dataUrl, label: '' });
         }
+        this.relabelRefImages();
         this.renderRefPreviews();
     },
 
@@ -288,7 +307,7 @@ const ImageGenerator = {
             thumb.querySelector('.btn-remove').addEventListener('click', (e) => {
                 e.stopPropagation();
                 this.refImages.splice(i, 1);
-                this.refImages.forEach((img, j) => img.label = `@img${j + 1}`);
+                this.relabelRefImages();
                 this.renderRefPreviews();
             });
             container.appendChild(thumb);
