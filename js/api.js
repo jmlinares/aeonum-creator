@@ -74,6 +74,8 @@ const API = {
             ...params
         };
 
+        console.log(`[API Submit] ${modelId} →`, url, body);
+
         const response = await fetch(url, {
             method: 'POST',
             headers: {
@@ -88,7 +90,9 @@ const API = {
             throw new Error(`WaveSpeed API error (${response.status}): ${err}`);
         }
 
-        return await response.json();
+        const result = await response.json();
+        console.log(`[API Submit] Response:`, result);
+        return result;
     },
 
     // ========== POLL FOR RESULT ==========
@@ -104,6 +108,7 @@ const API = {
         const apiKey = Storage.getWavespeedKey();
         const url = `${this.WAVESPEED_BASE}/predictions/${requestId}/result`;
         const startTime = Date.now();
+        const MAX_POLL_TIME = 300000; // 5 min timeout
 
         while (true) {
             if (this._cancelledRequests.has(requestId)) {
@@ -111,8 +116,13 @@ const API = {
                 throw new Error('CANCELLED');
             }
 
-            const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+            const elapsedMs = Date.now() - startTime;
+            const elapsed = (elapsedMs / 1000).toFixed(1);
             if (onProgress) onProgress(elapsed);
+
+            if (elapsedMs > MAX_POLL_TIME) {
+                throw new Error('Generation timed out after 5 minutes');
+            }
 
             const response = await fetch(url, {
                 headers: { 'Authorization': `Bearer ${apiKey}` }
@@ -124,11 +134,12 @@ const API = {
             }
 
             const data = await response.json();
+            console.log(`[Poll ${requestId}] status: ${data.status}`, data);
 
             if (data.status === 'completed') {
                 return data;
             } else if (data.status === 'failed' || data.status === 'error') {
-                throw new Error(`Generation failed: ${data.error || 'Unknown error'}`);
+                throw new Error(`Generation failed: ${data.error || data.data?.error || 'Unknown error'}`);
             }
 
             // Wait 2 seconds before next poll
