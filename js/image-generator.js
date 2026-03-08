@@ -72,7 +72,7 @@ const ImageGenerator = {
         // Prompt actions
         document.getElementById('btnImgClear').addEventListener('click', () => {
             document.getElementById('imgPrompt').value = '';
-            this.updatePromptHighlight();
+
         });
         document.getElementById('btnImgEnhance').addEventListener('click', () => {
             this.enhancePrompt();
@@ -93,13 +93,9 @@ const ImageGenerator = {
 
         promptInput.addEventListener('input', () => {
             this.updateMentionDropdown(promptInput, mentionDropdown);
-            this.updatePromptHighlight();
+
         });
 
-        promptInput.addEventListener('scroll', () => {
-            const highlight = document.getElementById('imgPromptHighlight');
-            highlight.scrollTop = promptInput.scrollTop;
-        });
 
         promptInput.addEventListener('keydown', (e) => {
             if (mentionDropdown.classList.contains('hidden')) return;
@@ -378,20 +374,6 @@ const ImageGenerator = {
         return refs;
     },
 
-    updatePromptHighlight() {
-        const textarea = document.getElementById('imgPrompt');
-        const highlight = document.getElementById('imgPromptHighlight');
-        if (!highlight) return;
-        // Escape HTML, then wrap @imgN in spans
-        let text = textarea.value
-            .replace(/&/g, '&amp;')
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;');
-        text = text.replace(/@img\d+/g, '<span class="mention-tag">$&</span>');
-        // Add trailing newline so height matches
-        highlight.innerHTML = text + '\n';
-    },
-
     updateMentionDropdown(textarea, dropdown) {
         const val = textarea.value;
         const pos = textarea.selectionStart;
@@ -429,7 +411,7 @@ const ImageGenerator = {
                 textarea.selectionStart = textarea.selectionEnd = start + ref.label.length + 1;
                 textarea.focus();
                 dropdown.classList.add('hidden');
-                this.updatePromptHighlight();
+    
             });
             dropdown.appendChild(item);
         });

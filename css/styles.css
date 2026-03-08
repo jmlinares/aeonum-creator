@@ -395,37 +395,10 @@ a:hover { text-decoration: underline; }
 
 .prompt-wrapper .prompt-input {
     position: relative;
-    z-index: 2;
-    background: transparent;
-    color: transparent;
-    caret-color: var(--text-primary);
 }
 
 .prompt-highlight {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    padding: 10px 12px;
-    font-size: 13px;
-    font-family: var(--font);
-    line-height: 1.5;
-    color: var(--text-primary);
-    background: var(--bg-input);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    z-index: 1;
-    pointer-events: none;
-    white-space: pre-wrap;
-    word-wrap: break-word;
-    overflow: hidden;
-}
-
-.prompt-highlight .mention-tag {
-    color: #60a5fa;
-    text-decoration: underline;
-    text-underline-offset: 2px;
+    display: none;
 }
 
 .mention-dropdown {
