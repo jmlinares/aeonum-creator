@@ -322,14 +322,17 @@ const ImageGenerator = {
                 }
 
                 try {
+                    console.log(`[Generate ${i+1}/${count}] Submitting...`);
                     const submitResult = await API.submit(modelId, params);
                     const requestId = submitResult.data?.id || submitResult.id;
+                    console.log(`[Generate ${i+1}/${count}] requestId: ${requestId}`);
 
                     if (!requestId) {
                         // Sync mode - immediate result
                         const outputs = this.extractOutputs(submitResult);
+                        console.log(`[Generate ${i+1}/${count}] Sync outputs:`, outputs);
                         for (const url of outputs) {
-                            this.addToHistory(url, fullPrompt, modelId, size, resolution);
+                            await this.addToHistory(url, fullPrompt, modelId, size, resolution);
                         }
                         this.removeGeneratingCard(placeholderId);
                         this.renderGrid();
@@ -345,12 +348,14 @@ const ImageGenerator = {
                     });
 
                     const outputs = this.extractOutputs(result);
+                    console.log(`[Generate ${i+1}/${count}] Poll outputs:`, outputs);
                     for (const url of outputs) {
-                        this.addToHistory(url, fullPrompt, modelId, size, resolution);
+                        await this.addToHistory(url, fullPrompt, modelId, size, resolution);
                     }
                     this.removeGeneratingCard(placeholderId);
                     this.renderGrid();
                 } catch (err) {
+                    console.error(`[Generate ${i+1}/${count}] Error:`, err);
                     this.removeGeneratingCard(placeholderId);
                     if (err.message === 'CANCELLED') continue;
                     throw err;
