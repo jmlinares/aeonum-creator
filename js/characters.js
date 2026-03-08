@@ -50,7 +50,7 @@ const Characters = {
             const card = document.createElement('div');
             card.className = 'character-card';
             const charImages = char.images && char.images.length > 0
-                ? char.images
+                ? char.images.slice(0, 4)
                 : [char.faceImage, char.bodyImage].filter(Boolean);
             card.innerHTML = `
                 <div class="char-card-name">${char.name}</div>
