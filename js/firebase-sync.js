@@ -147,20 +147,26 @@ const FirebaseSync = {
 
     // ===== FIRESTORE - CHARACTERS =====
 
-    async saveCharacter(char) {
+    async saveCharacter(char, onProgress) {
         if (!this.initialized) return;
         try {
-            // Upload base64 images to Storage, replace with URLs
-            const uploadedImages = [];
-            for (let i = 0; i < (char.images || []).length; i++) {
-                const img = char.images[i];
+            // Upload base64 images to Storage in parallel
+            const total = (char.images || []).length;
+            let done = 0;
+            const uploadPromises = (char.images || []).map((img, i) => {
                 if (img && img.startsWith('data:')) {
-                    const url = await this.uploadCharacterImage(img, char.id, i);
-                    uploadedImages.push(url);
+                    return this.uploadCharacterImage(img, char.id, i).then(url => {
+                        done++;
+                        if (onProgress) onProgress(done, total);
+                        return url;
+                    });
                 } else {
-                    uploadedImages.push(img);
+                    done++;
+                    if (onProgress) onProgress(done, total);
+                    return Promise.resolve(img);
                 }
-            }
+            });
+            const uploadedImages = await Promise.all(uploadPromises);
             const charToSave = {
                 ...char,
                 images: uploadedImages,

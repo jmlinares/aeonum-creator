@@ -190,8 +190,10 @@ const Characters = {
                 bodyImage: this.editImages[1]?.dataUrl || ''
             };
 
-            // Save to Firebase (uploads images to Storage, replaces base64 with URLs)
-            await FirebaseSync.saveCharacter(char);
+            // Save to Firebase (uploads images to Storage in parallel, replaces base64 with URLs)
+            await FirebaseSync.saveCharacter(char, (done, total) => {
+                saveBtn.textContent = `Saving ${done}/${total}...`;
+            });
 
             // Now char.images contains Firebase URLs (not base64) — safe for localStorage
             const chars = this.getAll();
