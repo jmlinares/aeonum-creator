@@ -46,6 +46,12 @@ const API = {
         return prices[resolution] || prices['1k'] || prices['4k'] || 0;
     },
 
+    getAvailableResolutions(modelId) {
+        const prices = this.IMAGE_PRICING[modelId];
+        if (!prices) return ['1k', '2k', '4k'];
+        return Object.keys(prices);
+    },
+
     getVideoCost(modelId, duration, withAudio = true) {
         const prices = this.VIDEO_PRICING[modelId];
         if (!prices) return 0;

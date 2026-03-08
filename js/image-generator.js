@@ -38,6 +38,20 @@ const ImageGenerator = {
             badge.textContent = option.dataset.badge || 'NB2';
             name.textContent = option.textContent;
         }
+        this.updateResolutionButtons(modelId);
+    },
+
+    updateResolutionButtons(modelId) {
+        const container = document.getElementById('imgResolution');
+        const resolutions = API.getAvailableResolutions(modelId);
+        container.innerHTML = '';
+        resolutions.forEach((res, i) => {
+            const btn = document.createElement('button');
+            btn.className = 'btn-toggle' + (i === 0 ? ' active' : '');
+            btn.dataset.value = res;
+            btn.textContent = res.toUpperCase();
+            container.appendChild(btn);
+        });
     },
 
     bindEvents() {
