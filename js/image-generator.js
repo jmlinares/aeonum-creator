@@ -103,15 +103,25 @@ const ImageGenerator = {
             if (charId) {
                 const char = Characters.getById(charId);
                 thumbs.innerHTML = '';
-                if (char.faceImage) {
-                    const img = document.createElement('img');
-                    img.src = char.faceImage;
-                    thumbs.appendChild(img);
-                }
-                if (char.bodyImage) {
-                    const img = document.createElement('img');
-                    img.src = char.bodyImage;
-                    thumbs.appendChild(img);
+                const charImages = char.images || [];
+                if (charImages.length > 0) {
+                    charImages.forEach(url => {
+                        const img = document.createElement('img');
+                        img.src = url;
+                        thumbs.appendChild(img);
+                    });
+                } else {
+                    // Backwards compat: old format
+                    if (char.faceImage) {
+                        const img = document.createElement('img');
+                        img.src = char.faceImage;
+                        thumbs.appendChild(img);
+                    }
+                    if (char.bodyImage) {
+                        const img = document.createElement('img');
+                        img.src = char.bodyImage;
+                        thumbs.appendChild(img);
+                    }
                 }
                 info.style.display = 'flex';
             } else {

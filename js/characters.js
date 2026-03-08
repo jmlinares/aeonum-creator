@@ -49,11 +49,15 @@ const Characters = {
         chars.forEach(char => {
             const card = document.createElement('div');
             card.className = 'character-card';
+            const charImages = char.images && char.images.length > 0
+                ? char.images
+                : [char.faceImage, char.bodyImage].filter(Boolean);
             card.innerHTML = `
                 <div class="char-card-name">${char.name}</div>
                 <div class="char-card-images">
-                    ${char.faceImage ? `<img src="${char.faceImage}" alt="face">` : ''}
-                    ${char.bodyImage ? `<img src="${char.bodyImage}" alt="body">` : `<div class="char-card-body-icon">👤</div>`}
+                    ${charImages.length > 0
+                        ? charImages.map(url => `<img src="${url}" alt="ref">`).join('')
+                        : `<div class="char-card-body-icon">👤</div>`}
                 </div>
                 <button class="btn-edit-char" data-id="${char.id}">Edit</button>
             `;
