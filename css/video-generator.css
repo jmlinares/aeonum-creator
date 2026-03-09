@@ -99,6 +99,7 @@
 .mo-badge.kling { background: linear-gradient(135deg, #dc2626, #f87171); }
 .mo-badge.kling-pro { background: linear-gradient(135deg, #ea580c, #fb923c); }
 .mo-badge.kling-sd { background: linear-gradient(135deg, #d97706, #fbbf24); }
+.mo-badge.sora { background: linear-gradient(135deg, #0ea5e9, #06b6d4); }
 
 .model-list {
     display: flex;

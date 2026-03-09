@@ -20,6 +20,7 @@ const API = {
         'veo-3.1-fast-text-to-video':    '/google/veo3.1-fast/text-to-video',
         'veo-3.1-fast-image-to-video':   '/google/veo3.1-fast/image-to-video',
         'veo-3.1-reference-to-video':    '/google/veo3.1/reference-to-video',
+        'sora-2-image-to-video':         '/openai/sora-2/image-to-video',
     },
 
     // ===== PRICING (USD per generation) =====
@@ -38,6 +39,7 @@ const API = {
         'veo-3.1-fast-text-to-video':   { flat: 1.20, flatNoAudio: 0.80 },
         'veo-3.1-fast-image-to-video':  { flat: 1.20, flatNoAudio: 0.80 },
         'veo-3.1-reference-to-video':   { perSec: 0.40, perSecNoAudio: 0.20 },
+        'sora-2-image-to-video':        { perSec: 0.10 },
     },
 
     getImageCost(modelId, resolution) {
@@ -55,8 +57,9 @@ const API = {
     getVideoCost(modelId, duration, withAudio = true) {
         const prices = this.VIDEO_PRICING[modelId];
         if (!prices) return 0;
-        if (prices.flat) return withAudio ? prices.flat : prices.flatNoAudio;
-        return (withAudio ? prices.perSec : prices.perSecNoAudio) * duration;
+        if (prices.flat) return withAudio ? prices.flat : (prices.flatNoAudio || prices.flat);
+        const rate = withAudio ? prices.perSec : (prices.perSecNoAudio || prices.perSec);
+        return rate * duration;
     },
 
     // Determine if a model is text-only (no input image required)

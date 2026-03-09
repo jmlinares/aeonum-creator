@@ -136,6 +136,8 @@ const VideoGenerator = {
     updateUIForModel(modelId) {
         const sourceSection = document.getElementById('vidSourceImageSection');
         const audioSection = document.getElementById('vidAudioSection');
+        const durationSelect = document.getElementById('vidDuration');
+        const isSora = modelId.startsWith('sora-2');
 
         // Image-to-video and reference models need source image section
         if (modelId.includes('image-to-video') || modelId.includes('reference-to-video')) {
@@ -144,8 +146,27 @@ const VideoGenerator = {
             sourceSection.classList.add('hidden');
         }
 
-        // All Veo models support audio
-        audioSection.classList.remove('hidden');
+        // Sora 2 always has audio, no separate audio section needed
+        if (isSora) {
+            audioSection.classList.add('hidden');
+        } else {
+            audioSection.classList.remove('hidden');
+        }
+
+        // Update duration options based on model
+        if (isSora) {
+            durationSelect.innerHTML = `
+                <option value="4">4 segundos</option>
+                <option value="8" selected>8 segundos</option>
+                <option value="12">12 segundos</option>
+            `;
+        } else {
+            durationSelect.innerHTML = `
+                <option value="4">4 segundos</option>
+                <option value="6">6 segundos</option>
+                <option value="8" selected>8 segundos</option>
+            `;
+        }
     },
 
     async setSourceImage(file) {
@@ -175,25 +196,38 @@ const VideoGenerator = {
         this.addGeneratingCard(placeholderId);
 
         try {
-            // Build params based on model type
-            const params = {
-                prompt: audio ? prompt + `\nSample Dialogue:\n${audio}` : prompt,
-                aspect_ratio: aspect,
-                duration: duration,
-                resolution: resolution,
-                generate_audio: true,
-            };
+            let params;
 
-            if (negPrompt) params.negative_prompt = negPrompt;
+            if (modelId === 'sora-2-image-to-video') {
+                // Sora 2 has its own schema: image, prompt, duration (4/8/12)
+                params = {
+                    prompt: audio ? prompt + `\nSample Dialogue:\n${audio}` : prompt,
+                    duration: duration,
+                };
+                if (this.sourceImageData) {
+                    params.image = this.sourceImageData;
+                }
+            } else {
+                // Veo models
+                params = {
+                    prompt: audio ? prompt + `\nSample Dialogue:\n${audio}` : prompt,
+                    aspect_ratio: aspect,
+                    duration: duration,
+                    resolution: resolution,
+                    generate_audio: true,
+                };
 
-            // Image-to-video: single image
-            if (modelId.includes('image-to-video') && this.sourceImageData) {
-                params.image = this.sourceImageData;
-            }
+                if (negPrompt) params.negative_prompt = negPrompt;
 
-            // Reference-to-video: images array
-            if (modelId.includes('reference-to-video') && this.sourceImageData) {
-                params.images = [this.sourceImageData];
+                // Image-to-video: single image
+                if (modelId.includes('image-to-video') && this.sourceImageData) {
+                    params.image = this.sourceImageData;
+                }
+
+                // Reference-to-video: images array
+                if (modelId.includes('reference-to-video') && this.sourceImageData) {
+                    params.images = [this.sourceImageData];
+                }
             }
 
             const submitResult = await API.submit(modelId, params);
