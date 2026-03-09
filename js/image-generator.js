@@ -502,6 +502,12 @@ const ImageGenerator = {
                     params.enable_web_search = false;
                 }
 
+                // For WAN 2.6 Image Edit
+                if (modelId === 'wan-2.6-image-edit') {
+                    params.seed = -1;
+                    params.enable_prompt_expansion = false;
+                }
+
                 try {
                     console.log(`[Generate ${i+1}/${count}] Submitting...`);
                     const submitResult = await API.submit(modelId, params);
