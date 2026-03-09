@@ -6,6 +6,7 @@ const ImageGenerator = {
     currentViewIndex: -1,
     isGenerating: false,
     activeRequestIds: [], // track polling request IDs for cancellation
+    viewerZoom: 1,
 
     async init() {
         // Try loading from Firebase first, fallback to localStorage
@@ -271,6 +272,9 @@ const ImageGenerator = {
         });
         document.getElementById('btnViewerPrev').addEventListener('click', () => this.viewPrev());
         document.getElementById('btnViewerNext').addEventListener('click', () => this.viewNext());
+        document.getElementById('btnViewerZoomIn').addEventListener('click', () => this.viewerZoomChange(0.25));
+        document.getElementById('btnViewerZoomOut').addEventListener('click', () => this.viewerZoomChange(-0.25));
+        document.getElementById('btnViewerRefresh').addEventListener('click', () => this.viewerZoomReset());
         document.getElementById('btnReuseSettings').addEventListener('click', () => this.reuseSettings());
         document.getElementById('btnViewerDownload').addEventListener('click', () => {
             this.downloadImage(this.currentViewIndex);
@@ -691,10 +695,24 @@ const ImageGenerator = {
         const img = this.generatedImages[idx];
         if (!img) return;
 
+        this.viewerZoomReset();
         document.getElementById('viewerImage').src = img.url;
         document.getElementById('viewerModel').textContent = img.model;
         document.getElementById('viewerPrompt').textContent = img.prompt;
         document.getElementById('modalImageViewer').classList.remove('hidden');
+    },
+
+    viewerZoomChange(delta) {
+        this.viewerZoom = Math.max(0.25, Math.min(5, this.viewerZoom + delta));
+        const img = document.getElementById('viewerImage');
+        img.style.transform = `scale(${this.viewerZoom})`;
+        img.style.transformOrigin = 'center center';
+    },
+
+    viewerZoomReset() {
+        this.viewerZoom = 1;
+        const img = document.getElementById('viewerImage');
+        img.style.transform = 'scale(1)';
     },
 
     viewPrev() {
