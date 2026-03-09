@@ -21,6 +21,7 @@ const API = {
         'veo-3.1-fast-image-to-video':   '/google/veo3.1-fast/image-to-video',
         'veo-3.1-reference-to-video':    '/google/veo3.1/reference-to-video',
         'sora-2-image-to-video':         '/openai/sora-2/image-to-video',
+        'kling-3.0-pro-image-to-video':  '/kwaivgi/kling-v3.0-pro/image-to-video',
     },
 
     // ===== PRICING (USD per generation) =====
@@ -40,6 +41,7 @@ const API = {
         'veo-3.1-fast-image-to-video':  { flat: 1.20, flatNoAudio: 0.80 },
         'veo-3.1-reference-to-video':   { perSec: 0.40, perSecNoAudio: 0.20 },
         'sora-2-image-to-video':        { perSec: 0.10 },
+        'kling-3.0-pro-image-to-video': { flat: 0.84, flatNoAudio: 0.56 },
     },
 
     getImageCost(modelId, resolution) {
@@ -117,7 +119,7 @@ const API = {
         const apiKey = Storage.getWavespeedKey();
         const url = `${this.WAVESPEED_BASE}/predictions/${requestId}/result`;
         const startTime = Date.now();
-        const MAX_POLL_TIME = 300000; // 5 min timeout
+        const MAX_POLL_TIME = 600000; // 10 min timeout
 
         while (true) {
             if (this._cancelledRequests.has(requestId)) {

@@ -216,7 +216,14 @@ const VideoGenerator = {
                     duration: duration,
                 };
                 if (this.sourceImageData) {
-                    params.image = this.sourceImageData;
+                    // Upload base64 to CDN for better compatibility
+                    if (this.sourceImageData.startsWith('data:')) {
+                        const blob = await (await fetch(this.sourceImageData)).blob();
+                        const file = new File([blob], 'source.png', { type: blob.type });
+                        params.image = await API.uploadFile(file);
+                    } else {
+                        params.image = this.sourceImageData;
+                    }
                 }
             } else if (modelId === 'kling-3.0-pro-image-to-video') {
                 // Kling 3.0 Pro: image, prompt, duration (3-15), cfg_scale, sound
@@ -228,7 +235,14 @@ const VideoGenerator = {
                 };
                 if (negPrompt) params.negative_prompt = negPrompt;
                 if (this.sourceImageData) {
-                    params.image = this.sourceImageData;
+                    // Upload base64 to CDN for better compatibility
+                    if (this.sourceImageData.startsWith('data:')) {
+                        const blob = await (await fetch(this.sourceImageData)).blob();
+                        const file = new File([blob], 'source.png', { type: blob.type });
+                        params.image = await API.uploadFile(file);
+                    } else {
+                        params.image = this.sourceImageData;
+                    }
                 }
             } else {
                 // Veo models
