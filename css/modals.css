@@ -45,6 +45,11 @@
     width: 520px;
 }
 
+.modal-vid-settings .model-list {
+    max-height: 55vh;
+    overflow-y: auto;
+}
+
 /* ========== IMAGE VIEWER ========== */
 .image-viewer {
     display: flex;

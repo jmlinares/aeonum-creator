@@ -33,6 +33,8 @@ const VideoGenerator = {
             'veo-3.1-fast-text-to-video':   { badge: 'FAST', name: 'Veo 3.1 Fast - Text to Video' },
             'veo-3.1-fast-image-to-video':  { badge: 'I2V',  name: 'Veo 3.1 Fast - Image to Video' },
             'veo-3.1-reference-to-video':   { badge: 'REF',  name: 'Veo 3.1 - Reference to Video' },
+            'sora-2-image-to-video':        { badge: 'SORA', name: 'Sora 2 - Image to Video' },
+            'kling-3.0-pro-image-to-video': { badge: 'K3P',  name: 'Kling 3.0 Pro - Image to Video' },
         };
 
         const m = models[modelId] || models['veo-3.1-text-to-video'];
