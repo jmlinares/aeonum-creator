@@ -146,15 +146,24 @@ const VideoGenerator = {
             sourceSection.classList.add('hidden');
         }
 
-        // Sora 2 always has audio, no separate audio section needed
-        if (isSora) {
+        // Sora 2 and Kling have built-in audio, no separate audio section needed
+        const isKling = modelId.startsWith('kling-');
+        if (isSora || isKling) {
             audioSection.classList.add('hidden');
         } else {
             audioSection.classList.remove('hidden');
         }
 
         // Update duration options based on model
-        if (isSora) {
+        if (modelId === 'kling-3.0-pro-image-to-video') {
+            durationSelect.innerHTML = `
+                <option value="3">3 segundos</option>
+                <option value="5" selected>5 segundos</option>
+                <option value="8">8 segundos</option>
+                <option value="10">10 segundos</option>
+                <option value="15">15 segundos</option>
+            `;
+        } else if (isSora) {
             durationSelect.innerHTML = `
                 <option value="4">4 segundos</option>
                 <option value="8" selected>8 segundos</option>
@@ -199,11 +208,23 @@ const VideoGenerator = {
             let params;
 
             if (modelId === 'sora-2-image-to-video') {
-                // Sora 2 has its own schema: image, prompt, duration (4/8/12)
+                // Sora 2: image, prompt, duration (4/8/12)
                 params = {
                     prompt: audio ? prompt + `\nSample Dialogue:\n${audio}` : prompt,
                     duration: duration,
                 };
+                if (this.sourceImageData) {
+                    params.image = this.sourceImageData;
+                }
+            } else if (modelId === 'kling-3.0-pro-image-to-video') {
+                // Kling 3.0 Pro: image, prompt, duration (3-15), cfg_scale, sound
+                params = {
+                    prompt: audio ? prompt + `\nSample Dialogue:\n${audio}` : prompt,
+                    duration: duration,
+                    cfg_scale: 0.5,
+                    sound: true,
+                };
+                if (negPrompt) params.negative_prompt = negPrompt;
                 if (this.sourceImageData) {
                     params.image = this.sourceImageData;
                 }
