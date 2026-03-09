@@ -53,7 +53,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Load characters from Firebase first, fallback to localStorage
     FirebaseSync.loadCharacters().then(fbChars => {
         if (fbChars && fbChars.length > 0) {
-            try { Storage.saveCharacters(fbChars); } catch (e) { /* localStorage may be full */ }
+            Characters.setAll(fbChars);
         }
         Characters.renderDropdown();
         Characters.renderGrid();

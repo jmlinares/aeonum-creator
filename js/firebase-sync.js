@@ -136,9 +136,13 @@ const FirebaseSync = {
             // Convert base64 dataUrl to blob
             const response = await fetch(dataUrl);
             const blob = await response.blob();
-            const ref = this.storage.ref(`characters/${charId}/img${index}.png`);
+            // Use unique filename to avoid cache/collision issues
+            const uniqueId = Date.now() + '_' + index;
+            const ref = this.storage.ref(`characters/${charId}/img_${uniqueId}.png`);
             await ref.put(blob);
-            return await ref.getDownloadURL();
+            const url = await ref.getDownloadURL();
+            console.log(`[CharUpload] img${index} → ${url.substring(0, 80)}...`);
+            return url;
         } catch (err) {
             console.error('Firebase char image upload error:', err);
             return dataUrl; // fallback

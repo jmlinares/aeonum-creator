@@ -2,10 +2,17 @@
 
 const Characters = {
     currentEditId: null,
-    editImages: [], // { dataUrl, label } — max 2
+    editImages: [], // { dataUrl, label } — max 14
+    _cache: null, // in-memory cache, synced from Firebase
 
     getAll() {
+        if (this._cache) return this._cache;
         return Storage.getCharacters();
+    },
+
+    setAll(chars) {
+        this._cache = chars;
+        try { Storage.saveCharacters(chars); } catch (e) { /* localStorage may be full */ }
     },
 
     save(char) {
@@ -13,18 +20,19 @@ const Characters = {
         if (char.id) {
             const idx = chars.findIndex(c => c.id === char.id);
             if (idx >= 0) chars[idx] = char;
+            else chars.push(char);
         } else {
             char.id = Date.now().toString();
             chars.push(char);
         }
-        Storage.saveCharacters(chars);
+        this.setAll(chars);
         FirebaseSync.saveCharacter(char);
         return char;
     },
 
     delete(id) {
         const chars = this.getAll().filter(c => c.id !== id);
-        Storage.saveCharacters(chars);
+        this.setAll(chars);
         FirebaseSync.deleteCharacter(id);
     },
 
@@ -97,13 +105,15 @@ const Characters = {
             nameInput.value = char.name;
             deleteBtn.classList.remove('hidden');
 
-            // Load existing images
-            const images = char.images || [];
+            // Load existing images (copy array to avoid mutating original)
+            let images = [...(char.images || [])];
             // Backwards compat: old format had faceImage/bodyImage
             if (images.length === 0) {
                 if (char.faceImage) images.push(char.faceImage);
                 if (char.bodyImage) images.push(char.bodyImage);
             }
+            // Deduplicate
+            images = [...new Set(images)];
             images.forEach((url, i) => {
                 this.editImages.push({ dataUrl: url, label: `@img${i + 1}` });
             });
@@ -204,12 +214,7 @@ const Characters = {
             } else {
                 chars.push(char);
             }
-
-            try {
-                Storage.saveCharacters(chars);
-            } catch (e) {
-                console.warn('localStorage full, chars saved to Firebase only');
-            }
+            this.setAll(chars);
 
             this.closeEditor();
             this.renderGrid();
