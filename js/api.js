@@ -159,6 +159,24 @@ const API = {
         }
     },
 
+    // ========== URL TO BASE64 ==========
+    async urlToBase64(url) {
+        // If already base64, return as-is
+        if (url.startsWith('data:')) return url;
+        try {
+            const response = await fetch(url);
+            const blob = await response.blob();
+            return new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onloadend = () => resolve(reader.result);
+                reader.readAsDataURL(blob);
+            });
+        } catch (err) {
+            console.error('Failed to convert URL to base64:', err);
+            return url; // fallback to URL
+        }
+    },
+
     // ========== UPLOAD FILE TO WAVESPEED CDN ==========
     async uploadFile(file) {
         const apiKey = Storage.getWavespeedKey();

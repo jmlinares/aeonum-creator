@@ -466,7 +466,7 @@ const ImageGenerator = {
                 if (size) params.aspect_ratio = size;
                 if (resolution) params.resolution = resolution;
 
-                // For edit models, add images
+                // For edit models, add images (convert URLs to base64 for API)
                 if (!API.isTextToImage(modelId)) {
                     const imageUrls = [];
 
@@ -489,7 +489,11 @@ const ImageGenerator = {
                     }
 
                     if (imageUrls.length > 0) {
-                        params.images = imageUrls;
+                        // Convert all URLs to base64 for WaveSpeed API compatibility
+                        const base64Images = await Promise.all(
+                            imageUrls.map(url => API.urlToBase64(url))
+                        );
+                        params.images = base64Images;
                     }
                 }
 
