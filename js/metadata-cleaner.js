@@ -41,6 +41,12 @@ const MetadataCleaner = {
         // Add more
         document.getElementById('btnMetaAddMore').addEventListener('click', () => fileInput.click());
 
+        // Select all
+        document.getElementById('btnMetaSelectAll').addEventListener('click', () => {
+            this.images.forEach(img => img.selected = true);
+            this.render();
+        });
+
         // Deselect all
         document.getElementById('btnMetaDeselectAll').addEventListener('click', () => {
             this.images.forEach(img => img.selected = false);
@@ -143,14 +149,10 @@ const MetadataCleaner = {
             countEl.textContent = `${i + 1}/${selected.length}`;
             fillEl.style.width = `${((i + 1) / selected.length) * 100}%`;
 
-            // Clean metadata by re-drawing on canvas (strips EXIF)
             try {
                 const cleanedDataUrl = await this.stripMetadata(img.dataUrl);
                 img.dataUrl = cleanedDataUrl;
                 img.cleaned = true;
-
-                // Create download
-                this.downloadCleanedImage(cleanedDataUrl, img.name);
             } catch (err) {
                 console.error('Failed to clean:', img.name, err);
             }
@@ -160,6 +162,43 @@ const MetadataCleaner = {
 
         cleanBtn.disabled = false;
         cleanBtn.textContent = 'Clean Metadata';
+
+        // Show download all button
+        this.showDownloadAll();
+    },
+
+    showDownloadAll() {
+        const cleaned = this.images.filter(i => i.cleaned);
+        if (cleaned.length === 0) return;
+
+        let dlBtn = document.getElementById('btnMetaDownloadAll');
+        if (!dlBtn) {
+            dlBtn = document.createElement('button');
+            dlBtn.id = 'btnMetaDownloadAll';
+            dlBtn.className = 'btn-accent';
+            dlBtn.style.marginTop = '12px';
+            document.getElementById('metaBottomActions').appendChild(dlBtn);
+        }
+        dlBtn.textContent = `Download All (${cleaned.length})`;
+        dlBtn.onclick = () => this.downloadAll();
+    },
+
+    async downloadAll() {
+        const cleaned = this.images.filter(i => i.cleaned);
+        if (cleaned.length === 0) return;
+
+        if (cleaned.length === 1) {
+            this.downloadCleanedImage(cleaned[0].dataUrl, cleaned[0].name);
+            return;
+        }
+
+        // Download each with small delay to avoid browser blocking
+        for (let i = 0; i < cleaned.length; i++) {
+            this.downloadCleanedImage(cleaned[i].dataUrl, cleaned[i].name);
+            if (i < cleaned.length - 1) {
+                await new Promise(r => setTimeout(r, 300));
+            }
+        }
     },
 
     stripMetadata(dataUrl) {
