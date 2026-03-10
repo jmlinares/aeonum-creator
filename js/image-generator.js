@@ -124,6 +124,48 @@ const ImageGenerator = {
             }
         });
 
+        // Click on @img in textarea opens dropdown to replace it
+        promptInput.addEventListener('click', () => {
+            const pos = promptInput.selectionStart;
+            const val = promptInput.value;
+            // Find if cursor is inside an @imgN token
+            const regex = /@img\d+/g;
+            let match;
+            while ((match = regex.exec(val)) !== null) {
+                const start = match.index;
+                const end = start + match[0].length;
+                if (pos >= start && pos <= end) {
+                    // Cursor is inside this mention - show dropdown to replace
+                    this._replacingMention = { start, end, original: match[0] };
+                    const refs = this.getAllImageRefs();
+                    if (refs.length === 0) break;
+                    mentionDropdown.innerHTML = '';
+                    refs.forEach((ref, i) => {
+                        const item = document.createElement('div');
+                        item.className = 'mention-item' + (i === 0 ? ' selected' : '');
+                        item.innerHTML = `
+                            <img src="${ref.thumb}" alt="">
+                            <span class="mention-label">${ref.label}</span>
+                            <span style="color:var(--text-secondary);font-size:11px;">${ref.source}</span>
+                        `;
+                        item.addEventListener('click', () => {
+                            const v = promptInput.value;
+                            promptInput.value = v.slice(0, start) + ref.label + v.slice(end);
+                            promptInput.selectionStart = promptInput.selectionEnd = start + ref.label.length;
+                            promptInput.focus();
+                            mentionDropdown.classList.add('hidden');
+                            this._replacingMention = null;
+                            this.updatePromptHighlight(promptInput, highlightDiv);
+                        });
+                        mentionDropdown.appendChild(item);
+                    });
+                    mentionSelectedIdx = 0;
+                    mentionDropdown.classList.remove('hidden');
+                    return;
+                }
+            }
+        });
+
         // Hide dropdown when clicking outside
         document.addEventListener('click', (e) => {
             if (!promptInput.contains(e.target) && !mentionDropdown.contains(e.target)) {
