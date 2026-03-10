@@ -136,7 +136,7 @@ const API = {
             if (onProgress) onProgress(elapsed);
 
             if (elapsedMs > MAX_POLL_TIME) {
-                throw new Error('Generation timed out after 5 minutes');
+                throw new Error('Generation timed out after 10 minutes');
             }
 
             const response = await fetch(url, {
