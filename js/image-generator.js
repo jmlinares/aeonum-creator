@@ -92,9 +92,16 @@ const ImageGenerator = {
         const mentionDropdown = document.getElementById('mentionDropdown');
         let mentionSelectedIdx = 0;
 
+        const highlightDiv = document.getElementById('imgPromptHighlight');
+
         promptInput.addEventListener('input', () => {
             this.updateMentionDropdown(promptInput, mentionDropdown);
+            this.updatePromptHighlight(promptInput, highlightDiv);
+        });
 
+        promptInput.addEventListener('scroll', () => {
+            highlightDiv.scrollTop = promptInput.scrollTop;
+            highlightDiv.scrollLeft = promptInput.scrollLeft;
         });
 
 
@@ -415,7 +422,8 @@ const ImageGenerator = {
                 textarea.selectionStart = textarea.selectionEnd = start + ref.label.length + 1;
                 textarea.focus();
                 dropdown.classList.add('hidden');
-    
+                const hl = document.getElementById('imgPromptHighlight');
+                if (hl) this.updatePromptHighlight(textarea, hl);
             });
             dropdown.appendChild(item);
         });
@@ -423,6 +431,17 @@ const ImageGenerator = {
         // Reset selection
         dropdown.querySelector('.mention-item')?.classList.add('selected');
         dropdown.classList.remove('hidden');
+    },
+
+    updatePromptHighlight(textarea, highlightDiv) {
+        const text = textarea.value;
+        // Escape HTML and wrap @imgN references with highlight span
+        const escaped = text
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/@img\d+/g, '<span class="mention-tag">$&</span>');
+        highlightDiv.innerHTML = escaped + '\n';
     },
 
     enhancePrompt() {

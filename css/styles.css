@@ -395,10 +395,38 @@ a:hover { text-decoration: underline; }
 
 .prompt-wrapper .prompt-input {
     position: relative;
+    z-index: 2;
+    background: transparent;
+    caret-color: var(--text);
 }
 
 .prompt-highlight {
-    display: none;
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 1;
+    pointer-events: none;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    overflow: hidden;
+    padding: 10px 12px;
+    font-family: inherit;
+    font-size: inherit;
+    line-height: inherit;
+    color: transparent;
+    background: var(--bg-input, #2a2a3d);
+    border-radius: var(--radius);
+    border: 1px solid transparent;
+}
+
+.prompt-highlight .mention-tag {
+    color: transparent;
+    background: rgba(59, 130, 246, 0.25);
+    border-bottom: 2px solid #3b82f6;
+    border-radius: 2px;
+    padding: 0 1px;
 }
 
 .mention-dropdown {
