@@ -23,6 +23,7 @@ const API = {
         'veo-3.1-reference-to-video':    '/google/veo3.1/reference-to-video',
         'sora-2-image-to-video':         '/openai/sora-2/image-to-video',
         'kling-3.0-pro-image-to-video':  '/kwaivgi/kling-v3.0-pro/image-to-video',
+        'kling-2.6-pro-image-to-video':  '/kwaivgi/kling-v2.6-pro/image-to-video',
     },
 
     // ===== PRICING (USD per generation) =====
@@ -44,6 +45,7 @@ const API = {
         'veo-3.1-reference-to-video':   { perSec: 0.40, perSecNoAudio: 0.20 },
         'sora-2-image-to-video':        { perSec: 0.10 },
         'kling-3.0-pro-image-to-video': { flat: 0.84, flatNoAudio: 0.56 },
+        'kling-2.6-pro-image-to-video': { flat: 0.56, flatNoAudio: 0.38 },
     },
 
     getImageCost(modelId, resolution) {

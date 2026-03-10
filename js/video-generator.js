@@ -35,6 +35,7 @@ const VideoGenerator = {
             'veo-3.1-reference-to-video':   { badge: 'REF',  name: 'Veo 3.1 - Reference to Video' },
             'sora-2-image-to-video':        { badge: 'SORA', name: 'Sora 2 - Image to Video' },
             'kling-3.0-pro-image-to-video': { badge: 'K3P',  name: 'Kling 3.0 Pro - Image to Video' },
+            'kling-2.6-pro-image-to-video': { badge: 'K26',  name: 'Kling 2.6 Pro - Image to Video' },
         };
 
         const m = models[modelId] || models['veo-3.1-text-to-video'];
@@ -157,7 +158,12 @@ const VideoGenerator = {
         }
 
         // Update duration options based on model
-        if (modelId === 'kling-3.0-pro-image-to-video') {
+        if (modelId === 'kling-2.6-pro-image-to-video') {
+            durationSelect.innerHTML = `
+                <option value="5" selected>5 segundos</option>
+                <option value="10">10 segundos</option>
+            `;
+        } else if (modelId === 'kling-3.0-pro-image-to-video') {
             durationSelect.innerHTML = `
                 <option value="3">3 segundos</option>
                 <option value="5" selected>5 segundos</option>
@@ -217,6 +223,25 @@ const VideoGenerator = {
                 };
                 if (this.sourceImageData) {
                     // Upload base64 to CDN for better compatibility
+                    if (this.sourceImageData.startsWith('data:')) {
+                        const blob = await (await fetch(this.sourceImageData)).blob();
+                        const file = new File([blob], 'source.png', { type: blob.type });
+                        params.image = await API.uploadFile(file);
+                    } else {
+                        params.image = this.sourceImageData;
+                    }
+                }
+            } else if (modelId === 'kling-2.6-pro-image-to-video') {
+                // Kling 2.6 Pro: image, prompt, duration (5/10), cfg_scale, sound, voice_list
+                params = {
+                    prompt: audio ? prompt + `\nSample Dialogue:\n${audio}` : prompt,
+                    duration: duration,
+                    cfg_scale: 0.5,
+                    sound: true,
+                    voice_list: [],
+                };
+                if (negPrompt) params.negative_prompt = negPrompt;
+                if (this.sourceImageData) {
                     if (this.sourceImageData.startsWith('data:')) {
                         const blob = await (await fetch(this.sourceImageData)).blob();
                         const file = new File([blob], 'source.png', { type: blob.type });
