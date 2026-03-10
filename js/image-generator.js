@@ -659,12 +659,15 @@ const ImageGenerator = {
             card.className = 'image-card';
             const costLabel = img.cost ? `$${img.cost.toFixed(3)}` : '';
             const isFav = img.starred ? 'starred' : '';
+            const cleanBtn = img.metaCleaned
+                ? `<button class="btn-card cleaned" title="Metadata Cleaned" data-action="clean-meta" data-idx="${idx}" disabled>✅</button>`
+                : `<button class="btn-card" title="Clean Metadata" data-action="clean-meta" data-idx="${idx}">🧹</button>`;
             card.innerHTML = `
                 <img src="${img.url}" alt="Generated" loading="lazy">
                 ${costLabel ? `<span class="card-cost">${costLabel}</span>` : ''}
                 <div class="card-actions-right">
                     <button class="btn-card ${isFav}" title="Favorite" data-action="star" data-idx="${idx}">☆</button>
-                    <button class="btn-card" title="Clean Metadata" data-action="clean-meta" data-idx="${idx}">🧹</button>
+                    ${cleanBtn}
                     <button class="btn-card" title="Download" data-action="download" data-idx="${idx}">⬇</button>
                     <button class="btn-card" title="Delete" data-action="delete" data-idx="${idx}">🗑</button>
                 </div>
@@ -684,7 +687,7 @@ const ImageGenerator = {
                     else if (action === 'to-video') this.sendToVideo(idx);
                     else if (action === 'remix') this.remixImage(idx);
                     else if (action === 'add-ref') this.addRefFromUrl(this.generatedImages[idx].url);
-                    else if (action === 'clean-meta') this.cleanAndDownload(idx, actionBtn);
+                    else if (action === 'clean-meta') this.cleanMetadata(idx, actionBtn);
                     return;
                 }
                 this.openViewer(idx);
@@ -745,22 +748,20 @@ const ImageGenerator = {
         document.body.removeChild(a);
     },
 
-    async cleanAndDownload(idx, btnElement) {
+    async cleanMetadata(idx, btnElement) {
         const img = this.generatedImages[idx];
         if (!img) return;
+        if (img.metaCleaned) return; // already cleaned
         if (btnElement) { btnElement.textContent = '⏳'; btnElement.disabled = true; }
         try {
             const dataUrl = await API.urlToBase64(img.url);
             const cleanedUrl = await MetadataCleaner.stripMetadata(dataUrl);
-            const a = document.createElement('a');
-            a.href = cleanedUrl;
-            a.download = `generated_${img.id}_clean.png`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
+            img.url = cleanedUrl;
+            img.metaCleaned = true;
+            Storage.set('image_history', this.generatedImages);
+            this.renderGrid();
         } catch (err) {
             alert('Error cleaning metadata: ' + err.message);
-        } finally {
             if (btnElement) { btnElement.textContent = '🧹'; btnElement.disabled = false; }
         }
     },
