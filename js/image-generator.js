@@ -73,7 +73,7 @@ const ImageGenerator = {
         // Prompt actions
         document.getElementById('btnImgClear').addEventListener('click', () => {
             document.getElementById('imgPrompt').value = '';
-
+            document.getElementById('imgPromptHighlight').innerHTML = '';
         });
         document.getElementById('btnImgEnhance').addEventListener('click', () => {
             this.enhancePrompt();

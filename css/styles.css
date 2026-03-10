@@ -426,11 +426,9 @@ a:hover { text-decoration: underline; }
 
 .prompt-highlight .mention-tag {
     color: transparent;
-    background: rgba(59, 130, 246, 0.3);
+    background: transparent;
     border-bottom: 2px solid #3b82f6;
-    border-radius: 3px;
-    padding: 1px 2px;
-    margin: 0 -2px;
+    padding: 1px 0;
 }
 
 .mention-dropdown {
