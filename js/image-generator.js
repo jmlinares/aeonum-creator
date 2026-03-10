@@ -684,7 +684,7 @@ const ImageGenerator = {
                     else if (action === 'to-video') this.sendToVideo(idx);
                     else if (action === 'remix') this.remixImage(idx);
                     else if (action === 'add-ref') this.addRefFromUrl(this.generatedImages[idx].url);
-                    else if (action === 'clean-meta') this.cleanAndDownload(idx);
+                    else if (action === 'clean-meta') this.cleanAndDownload(idx, actionBtn);
                     return;
                 }
                 this.openViewer(idx);
@@ -745,11 +745,10 @@ const ImageGenerator = {
         document.body.removeChild(a);
     },
 
-    async cleanAndDownload(idx) {
+    async cleanAndDownload(idx, btnElement) {
         const img = this.generatedImages[idx];
         if (!img) return;
-        const btn = document.querySelector(`[data-action="clean-meta"][data-idx="${idx}"]`);
-        if (btn) { btn.textContent = '⏳'; btn.disabled = true; }
+        if (btnElement) { btnElement.textContent = '⏳'; btnElement.disabled = true; }
         try {
             const dataUrl = await API.urlToBase64(img.url);
             const cleanedUrl = await MetadataCleaner.stripMetadata(dataUrl);
@@ -761,8 +760,9 @@ const ImageGenerator = {
             document.body.removeChild(a);
         } catch (err) {
             alert('Error cleaning metadata: ' + err.message);
+        } finally {
+            if (btnElement) { btnElement.textContent = '🧹'; btnElement.disabled = false; }
         }
-        if (btn) { btn.textContent = '🧹'; btn.disabled = false; }
     },
 
     toggleStar(idx) {
