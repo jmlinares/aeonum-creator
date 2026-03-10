@@ -664,6 +664,7 @@ const ImageGenerator = {
                 ${costLabel ? `<span class="card-cost">${costLabel}</span>` : ''}
                 <div class="card-actions-right">
                     <button class="btn-card ${isFav}" title="Favorite" data-action="star" data-idx="${idx}">☆</button>
+                    <button class="btn-card" title="Clean Metadata" data-action="clean-meta" data-idx="${idx}">🧹</button>
                     <button class="btn-card" title="Download" data-action="download" data-idx="${idx}">⬇</button>
                     <button class="btn-card" title="Delete" data-action="delete" data-idx="${idx}">🗑</button>
                 </div>
@@ -683,6 +684,7 @@ const ImageGenerator = {
                     else if (action === 'to-video') this.sendToVideo(idx);
                     else if (action === 'remix') this.remixImage(idx);
                     else if (action === 'add-ref') this.addRefFromUrl(this.generatedImages[idx].url);
+                    else if (action === 'clean-meta') this.cleanAndDownload(idx);
                     return;
                 }
                 this.openViewer(idx);
@@ -741,6 +743,26 @@ const ImageGenerator = {
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
+    },
+
+    async cleanAndDownload(idx) {
+        const img = this.generatedImages[idx];
+        if (!img) return;
+        const btn = document.querySelector(`[data-action="clean-meta"][data-idx="${idx}"]`);
+        if (btn) { btn.textContent = '⏳'; btn.disabled = true; }
+        try {
+            const dataUrl = await API.urlToBase64(img.url);
+            const cleanedUrl = await MetadataCleaner.stripMetadata(dataUrl);
+            const a = document.createElement('a');
+            a.href = cleanedUrl;
+            a.download = `generated_${img.id}_clean.png`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        } catch (err) {
+            alert('Error cleaning metadata: ' + err.message);
+        }
+        if (btn) { btn.textContent = '🧹'; btn.disabled = false; }
     },
 
     toggleStar(idx) {
