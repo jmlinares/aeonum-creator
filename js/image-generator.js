@@ -554,11 +554,8 @@ const ImageGenerator = {
                     }
 
                     if (imageUrls.length > 0) {
-                        // Convert all URLs to base64 for WaveSpeed API compatibility
-                        const base64Images = await Promise.all(
-                            imageUrls.map(url => API.urlToBase64(url))
-                        );
-                        params.images = base64Images;
+                        // Send URLs directly (WaveSpeed accepts public URLs and base64 data URIs)
+                        params.images = imageUrls;
                     }
                 }
 
