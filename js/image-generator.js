@@ -815,20 +815,20 @@ const ImageGenerator = {
         if (img.metaCleaned) return;
         if (btnElement) { btnElement.textContent = '⏳'; btnElement.disabled = true; }
         try {
-            // Try to use the already-loaded img element from the card
-            const card = btnElement.closest('.image-card');
-            const imgEl = card ? card.querySelector('img') : null;
-            let cleanedUrl;
-            if (imgEl && imgEl.naturalWidth > 0) {
-                // Image already loaded in DOM - draw directly to canvas
-                const canvas = document.createElement('canvas');
-                canvas.width = imgEl.naturalWidth;
-                canvas.height = imgEl.naturalHeight;
-                canvas.getContext('2d').drawImage(imgEl, 0, 0);
-                cleanedUrl = canvas.toDataURL('image/png');
+            let dataUrl;
+            if (img.url.startsWith('data:')) {
+                dataUrl = img.url;
             } else {
-                cleanedUrl = await this.stripViaCanvas(img.url);
+                // Fetch image as blob to avoid CORS tainted canvas
+                const resp = await fetch(img.url);
+                const blob = await resp.blob();
+                dataUrl = await new Promise((res) => {
+                    const reader = new FileReader();
+                    reader.onloadend = () => res(reader.result);
+                    reader.readAsDataURL(blob);
+                });
             }
+            const cleanedUrl = await MetadataCleaner.stripMetadata(dataUrl);
             img.url = cleanedUrl;
             img.metaCleaned = true;
             Storage.set('image_history', this.generatedImages);
@@ -837,41 +837,6 @@ const ImageGenerator = {
             alert('Error cleaning metadata: ' + err.message);
             if (btnElement) { btnElement.textContent = '🧹'; btnElement.disabled = false; }
         }
-    },
-
-    stripViaCanvas(url) {
-        return new Promise((resolve, reject) => {
-            const img = new Image();
-            img.onload = () => {
-                try {
-                    const canvas = document.createElement('canvas');
-                    canvas.width = img.naturalWidth;
-                    canvas.height = img.naturalHeight;
-                    canvas.getContext('2d').drawImage(img, 0, 0);
-                    resolve(canvas.toDataURL('image/png'));
-                } catch (e) {
-                    // Canvas tainted by CORS - fallback: fetch via proxy-less base64
-                    this.stripViaFetchBlob(url).then(resolve).catch(reject);
-                }
-            };
-            img.onerror = () => {
-                // Fallback if img tag fails
-                this.stripViaFetchBlob(url).then(resolve).catch(reject);
-            };
-            img.src = url;
-        });
-    },
-
-    async stripViaFetchBlob(url) {
-        // Fetch as blob, read as dataUrl, then strip via new img
-        const resp = await fetch(url, { mode: 'cors' });
-        const blob = await resp.blob();
-        const dataUrl = await new Promise((res) => {
-            const reader = new FileReader();
-            reader.onloadend = () => res(reader.result);
-            reader.readAsDataURL(blob);
-        });
-        return MetadataCleaner.stripMetadata(dataUrl);
     },
 
     toggleStar(idx) {
