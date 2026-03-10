@@ -573,6 +573,7 @@ const ImageGenerator = {
     },
 
     cancelGeneration() {
+        if (!confirm('Cancelling stops waiting for results, but WaveSpeed still charges credits for requests already submitted. Continue?')) return;
         this.isGenerating = false;
         // Cancel all active polling requests
         for (const reqId of this.activeRequestIds) {
