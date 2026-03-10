@@ -751,11 +751,11 @@ const ImageGenerator = {
     async cleanMetadata(idx, btnElement) {
         const img = this.generatedImages[idx];
         if (!img) return;
-        if (img.metaCleaned) return; // already cleaned
+        if (img.metaCleaned) return;
         if (btnElement) { btnElement.textContent = '⏳'; btnElement.disabled = true; }
         try {
-            const dataUrl = await API.urlToBase64(img.url);
-            const cleanedUrl = await MetadataCleaner.stripMetadata(dataUrl);
+            // Use img tag + canvas to bypass CORS (no fetch needed)
+            const cleanedUrl = await this.stripViaCanvas(img.url);
             img.url = cleanedUrl;
             img.metaCleaned = true;
             Storage.set('image_history', this.generatedImages);
@@ -764,6 +764,22 @@ const ImageGenerator = {
             alert('Error cleaning metadata: ' + err.message);
             if (btnElement) { btnElement.textContent = '🧹'; btnElement.disabled = false; }
         }
+    },
+
+    stripViaCanvas(url) {
+        return new Promise((resolve, reject) => {
+            const img = new Image();
+            img.crossOrigin = 'anonymous';
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                canvas.width = img.naturalWidth;
+                canvas.height = img.naturalHeight;
+                canvas.getContext('2d').drawImage(img, 0, 0);
+                resolve(canvas.toDataURL('image/png'));
+            };
+            img.onerror = () => reject(new Error('Failed to load image'));
+            img.src = url;
+        });
     },
 
     toggleStar(idx) {
