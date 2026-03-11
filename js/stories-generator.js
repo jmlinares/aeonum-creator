@@ -354,10 +354,11 @@ const StoriesGenerator = {
                     <option value="4" ${story.count === 4 ? 'selected' : ''}>4</option>
                 </select>
                 <select class="story-setting-select" data-field="aspectRatio">
-                    <option value="9:16" ${story.aspectRatio === '9:16' ? 'selected' : ''}>9:16</option>
-                    <option value="16:9" ${story.aspectRatio === '16:9' ? 'selected' : ''}>16:9</option>
-                    <option value="1:1" ${story.aspectRatio === '1:1' ? 'selected' : ''}>1:1</option>
-                    <option value="4:5" ${story.aspectRatio === '4:5' ? 'selected' : ''}>4:5</option>
+                    <option value="9:16" ${story.aspectRatio === '9:16' ? 'selected' : ''}>Story 9:16</option>
+                    <option value="16:9" ${story.aspectRatio === '16:9' ? 'selected' : ''}>Landscape 16:9</option>
+                    <option value="1:1" ${story.aspectRatio === '1:1' ? 'selected' : ''}>Square 1:1</option>
+                    <option value="4:5" ${story.aspectRatio === '4:5' ? 'selected' : ''}>Portrait 4:5</option>
+                    <option value="3:4" ${story.aspectRatio === '3:4' ? 'selected' : ''}>Photo 3:4</option>
                 </select>
                 <select class="story-setting-select" data-field="resolution">
                     <option value="1k" ${story.resolution === '1k' ? 'selected' : ''}>1K</option>
