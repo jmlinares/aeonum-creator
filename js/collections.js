@@ -251,8 +251,11 @@ const Collections = {
             grid.appendChild(card);
         });
 
-        // Append the "New Collection" button card
-        const newBtn = document.getElementById('btnNewCollection');
+        // Create the "New Collection" button card dynamically (original gets destroyed by innerHTML='')
+        const newBtn = document.createElement('div');
+        newBtn.className = 'collection-card new-collection';
+        newBtn.innerHTML = `<span class="plus-icon">+</span><span>New Collection</span>`;
+        newBtn.addEventListener('click', () => this.openEditor(null));
         grid.appendChild(newBtn);
     },
 
