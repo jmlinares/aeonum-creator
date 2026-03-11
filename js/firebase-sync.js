@@ -206,5 +206,38 @@ const FirebaseSync = {
             console.error('Firestore load chars error:', err);
             return [];
         }
+    },
+
+    // ===== FIRESTORE - COLLECTIONS =====
+
+    async saveCollection(col) {
+        if (!this.initialized) return;
+        try {
+            await this.db.collection('collections').doc(col.id).set(col);
+        } catch (err) {
+            console.error('Firestore save collection error:', err);
+        }
+    },
+
+    async deleteCollection(id) {
+        if (!this.initialized) return;
+        try {
+            await this.db.collection('collections').doc(id).delete();
+        } catch (err) {
+            console.error('Firestore delete collection error:', err);
+        }
+    },
+
+    async loadCollections() {
+        if (!this.initialized) return [];
+        try {
+            const snap = await this.db.collection('collections')
+                .orderBy('createdAt', 'desc')
+                .get();
+            return snap.docs.map(d => d.data());
+        } catch (err) {
+            console.error('Firestore load collections error:', err);
+            return [];
+        }
     }
 };

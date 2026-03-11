@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="css/image-generator.css">
     <link rel="stylesheet" href="css/video-generator.css">
     <link rel="stylesheet" href="css/metadata-cleaner.css">
+    <link rel="stylesheet" href="css/collections.css">
     <link rel="stylesheet" href="css/modals.css">
 </head>
 <body>
@@ -145,6 +146,7 @@
                 <div class="sub-tabs">
                     <button class="sub-tab active" data-subtab="generation">🎨 Generation</button>
                     <button class="sub-tab" data-subtab="character">🟡 Character</button>
+                    <button class="sub-tab" data-subtab="collections">📁 Collections</button>
                 </div>
 
                 <!-- Search bar -->
@@ -172,6 +174,23 @@
                     <div class="character-card new-character" id="btnNewCharacter">
                         <span class="plus-icon">+</span>
                         <span>New Character</span>
+                    </div>
+                </div>
+
+                <!-- Collections Management (sub-tab) -->
+                <div class="content-area hidden" id="imgCollectionsManager">
+                    <div class="collections-grid" id="collectionsGrid">
+                        <div class="collection-card new-collection" id="btnNewCollection">
+                            <span class="plus-icon">+</span>
+                            <span>New Collection</span>
+                        </div>
+                    </div>
+                    <div class="collection-detail-view hidden" id="collectionDetailView">
+                        <div class="collection-detail-header">
+                            <button class="btn-sm" id="btnCollectionBack">← Back</button>
+                            <span class="collection-detail-name" id="collectionDetailName"></span>
+                        </div>
+                        <div class="image-grid" id="collectionImageGrid"></div>
                     </div>
                 </div>
             </div>
@@ -479,6 +498,9 @@
                 </div>
                 <div class="viewer-buttons">
                     <button class="btn-sm" id="btnViewerRemix">Remix</button>
+                    <button class="btn-sm" id="btnViewerAddToCol">Add to Collection</button>
+                </div>
+                <div class="viewer-buttons">
                     <button class="btn-sm" id="btnViewerDelete">Delete</button>
                 </div>
                 <details class="viewer-details" open>
@@ -531,6 +553,42 @@
         </div>
     </div>
 
+    <!-- Collection Editor Modal -->
+    <div class="modal-overlay hidden" id="modalCollectionEditor">
+        <div class="modal">
+            <h2 id="collectionEditorTitle">New Collection</h2>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Collection Name</label>
+                    <input type="text" class="form-input" id="collectionName" placeholder="e.g. Product Shots">
+                </div>
+                <div class="form-group">
+                    <label>Description (optional)</label>
+                    <input type="text" class="form-input" id="collectionDesc" placeholder="Brief description...">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-sm" id="btnCollectionCancel">Cancel</button>
+                <button class="btn-sm btn-danger hidden" id="btnCollectionDelete">Delete</button>
+                <button class="btn-sm btn-accent" id="btnCollectionSave">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add to Collection Modal -->
+    <div class="modal-overlay hidden" id="modalAddToCollection">
+        <div class="modal">
+            <h2>Add to Collection</h2>
+            <div class="modal-body">
+                <div class="add-to-col-list" id="addToColList"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-sm" id="btnAddToColCancel">Cancel</button>
+                <button class="btn-sm btn-accent" id="btnAddToColNew">+ New Collection</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Translator Panel (right side) -->
     <div class="translator-panel hidden" id="translatorPanel">
         <div class="translator-header">
@@ -569,6 +627,7 @@
     <script src="js/api.js"></script>
     <script src="js/storage.js"></script>
     <script src="js/characters.js"></script>
+    <script src="js/collections.js"></script>
     <script src="js/image-generator.js"></script>
     <script src="js/video-generator.js"></script>
     <script src="js/metadata-cleaner.js"></script>

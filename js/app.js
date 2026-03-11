@@ -61,6 +61,7 @@ document.addEventListener('DOMContentLoaded', () => {
     ImageGenerator.init();
     VideoGenerator.init();
     MetadataCleaner.init();
+    Collections.init();
 
     // ===== BALANCE DISPLAY =====
     async function refreshBalance() {

@@ -241,5 +241,33 @@ const API = {
             reader.onerror = reject;
             reader.readAsDataURL(file);
         });
+    },
+
+    // Ensure image meets minimum dimension requirements (e.g. WAN 2.6 needs 240-8000px)
+    // Returns a Promise that resolves to a valid image URL/dataUrl (upscaled if needed)
+    ensureMinDimensions(imageUrl, minSize = 240) {
+        return new Promise((resolve, reject) => {
+            const img = new Image();
+            img.crossOrigin = 'anonymous';
+            img.onload = () => {
+                if (img.naturalWidth >= minSize && img.naturalHeight >= minSize) {
+                    resolve(imageUrl); // already valid
+                    return;
+                }
+                // Scale up to meet minimum
+                const scale = Math.max(minSize / img.naturalWidth, minSize / img.naturalHeight);
+                const newW = Math.round(img.naturalWidth * scale);
+                const newH = Math.round(img.naturalHeight * scale);
+                const canvas = document.createElement('canvas');
+                canvas.width = newW;
+                canvas.height = newH;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, newW, newH);
+                console.log(`[ensureMinDimensions] Upscaled ${img.naturalWidth}x${img.naturalHeight} → ${newW}x${newH}`);
+                resolve(canvas.toDataURL('image/png'));
+            };
+            img.onerror = () => resolve(imageUrl); // fallback on error
+            img.src = imageUrl;
+        });
     }
 };

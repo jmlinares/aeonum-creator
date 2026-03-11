@@ -265,16 +265,22 @@ const ImageGenerator = {
                 const subtab = tab.dataset.subtab;
                 const genGrid = document.getElementById('imgGenerationGrid');
                 const charManager = document.getElementById('imgCharacterManager');
+                const colManager = document.getElementById('imgCollectionsManager');
                 const searchBar = document.getElementById('imgSearchBar');
 
+                genGrid.classList.add('hidden');
+                charManager.classList.add('hidden');
+                colManager.classList.add('hidden');
+                searchBar.classList.add('hidden');
+
                 if (subtab === 'character') {
-                    genGrid.classList.add('hidden');
                     charManager.classList.remove('hidden');
-                    searchBar.classList.add('hidden');
                     Characters.renderGrid();
+                } else if (subtab === 'collections') {
+                    colManager.classList.remove('hidden');
+                    Collections.renderView();
                 } else {
                     genGrid.classList.remove('hidden');
-                    charManager.classList.add('hidden');
                     searchBar.classList.remove('hidden');
                 }
             });
@@ -339,6 +345,10 @@ const ImageGenerator = {
         document.getElementById('btnViewerDelete').addEventListener('click', () => {
             this.deleteImage(this.currentViewIndex);
             document.getElementById('modalImageViewer').classList.add('hidden');
+        });
+        document.getElementById('btnViewerAddToCol').addEventListener('click', () => {
+            const img = this.generatedImages[this.currentViewIndex];
+            if (img) Collections.showAddToCollectionModal(img.id);
         });
         document.getElementById('btnUseImage').addEventListener('click', () => {
             const img = this.generatedImages[this.currentViewIndex];
@@ -554,8 +564,10 @@ const ImageGenerator = {
                     }
 
                     if (imageUrls.length > 0) {
-                        // Send URLs directly (WaveSpeed accepts public URLs and base64 data URIs)
-                        params.images = imageUrls;
+                        // Ensure all images meet minimum dimension requirements (240px for WAN 2.6, etc.)
+                        params.images = await Promise.all(
+                            imageUrls.map(url => API.ensureMinDimensions(url, 240))
+                        );
                     }
                 }
 
@@ -730,6 +742,7 @@ const ImageGenerator = {
                     <button class="btn-card" title="Delete" data-action="delete" data-idx="${idx}">🗑</button>
                 </div>
                 <div class="card-actions-left">
+                    <button class="btn-card" title="Add to Collection" data-action="add-to-col" data-idx="${idx}">📁</button>
                     <button class="btn-card" title="Use as Reference" data-action="add-ref" data-idx="${idx}">＋</button>
                     <button class="btn-card" title="Send to Video" data-action="to-video" data-idx="${idx}">▶</button>
                     <button class="btn-card" title="Edit / Remix" data-action="remix" data-idx="${idx}">🎬</button>
@@ -745,6 +758,7 @@ const ImageGenerator = {
                     else if (action === 'to-video') this.sendToVideo(idx);
                     else if (action === 'remix') this.remixImage(idx);
                     else if (action === 'add-ref') this.addRefFromUrl(this.generatedImages[idx].url);
+                    else if (action === 'add-to-col') Collections.showAddToCollectionModal(this.generatedImages[idx].id);
                     else if (action === 'clean-meta') this.cleanMetadata(idx, actionBtn);
                     return;
                 }
