@@ -116,7 +116,7 @@ a:hover { text-decoration: underline; }
     color: white;
 }
 
-.nav-icon { font-size: 15px; }
+.nav-icon { font-size: 15px; line-height: 1; vertical-align: middle; }
 
 .topbar-right {
     display: flex;
