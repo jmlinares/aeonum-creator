@@ -9,6 +9,7 @@
     <link rel="stylesheet" href="css/video-generator.css">
     <link rel="stylesheet" href="css/metadata-cleaner.css">
     <link rel="stylesheet" href="css/collections.css">
+    <link rel="stylesheet" href="css/stories-generator.css">
     <link rel="stylesheet" href="css/modals.css">
 </head>
 <body>
@@ -21,13 +22,16 @@
             </div>
             <nav class="main-nav">
                 <button class="nav-tab active" data-tab="image-generator">
-                    <span class="nav-icon">🎨</span> Image Generator
+                    <span class="nav-icon">🎨</span> IMAGE GENERATOR
                 </button>
                 <button class="nav-tab" data-tab="video-generator">
-                    <span class="nav-icon">🎬</span> Video Generator
+                    <span class="nav-icon">🎬</span> VIDEO GENERATOR
+                </button>
+                <button class="nav-tab" data-tab="stories-generator">
+                    <span class="nav-icon">📸</span> STORIES
                 </button>
                 <button class="nav-tab" data-tab="metadata-cleaner">
-                    <span class="nav-icon">🧹</span> Metadata Cleaner
+                    <span class="nav-icon">🧹</span> METADATA CLEANER
                 </button>
             </nav>
         </div>
@@ -300,6 +304,31 @@
                         <p>No videos generated yet. Write a prompt and click Generate.</p>
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== STORIES GENERATOR ==================== -->
+    <div class="tab-content" id="stories-generator">
+        <div class="stories-layout">
+            <!-- Top toolbar -->
+            <div class="stories-toolbar">
+                <div class="stories-toolbar-left">
+                    <h2 class="stories-title">📸 Stories Generator</h2>
+                    <button class="btn-sm btn-accent" id="btnAddStory">+ Add Story</button>
+                    <button class="btn-sm btn-generate-all" id="btnGenerateAll">⚡ Generate All</button>
+                </div>
+                <div class="stories-toolbar-right">
+                    <span class="stories-counter" id="storiesCounter">0 stories</span>
+                    <button class="btn-sm" id="btnClearApproved" title="Remove approved stories">🗑 Clear Approved</button>
+                </div>
+            </div>
+
+            <!-- Stories horizontal scroll container -->
+            <div class="stories-container">
+                <button class="stories-nav-arrow left" id="btnStoriesScrollLeft">❮</button>
+                <div class="stories-scroll" id="storiesScroll"></div>
+                <button class="stories-nav-arrow right" id="btnStoriesScrollRight">❯</button>
             </div>
         </div>
     </div>
@@ -628,6 +657,7 @@
     <script src="js/storage.js"></script>
     <script src="js/characters.js"></script>
     <script src="js/collections.js"></script>
+    <script src="js/stories-generator.js"></script>
     <script src="js/image-generator.js"></script>
     <script src="js/video-generator.js"></script>
     <script src="js/metadata-cleaner.js"></script>

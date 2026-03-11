@@ -239,5 +239,38 @@ const FirebaseSync = {
             console.error('Firestore load collections error:', err);
             return [];
         }
+    },
+
+    // ===== FIRESTORE - STORIES =====
+
+    async saveStory(story) {
+        if (!this.initialized) return;
+        try {
+            await this.db.collection('stories').doc(story.id).set(story);
+        } catch (err) {
+            console.error('Firestore save story error:', err);
+        }
+    },
+
+    async deleteStory(id) {
+        if (!this.initialized) return;
+        try {
+            await this.db.collection('stories').doc(id).delete();
+        } catch (err) {
+            console.error('Firestore delete story error:', err);
+        }
+    },
+
+    async loadStories() {
+        if (!this.initialized) return [];
+        try {
+            const snap = await this.db.collection('stories')
+                .orderBy('createdAt', 'asc')
+                .get();
+            return snap.docs.map(d => d.data());
+        } catch (err) {
+            console.error('Firestore load stories error:', err);
+            return [];
+        }
     }
 };

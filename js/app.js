@@ -60,6 +60,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     ImageGenerator.init();
     VideoGenerator.init();
+    StoriesGenerator.init();
     MetadataCleaner.init();
     Collections.init();
 
