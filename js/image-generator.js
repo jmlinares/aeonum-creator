@@ -682,6 +682,13 @@ const ImageGenerator = {
             timestamp: new Date().toISOString()
         };
 
+        // Detect real image dimensions
+        try {
+            const dims = await this.getImageDimensions(url);
+            item.width = dims.width;
+            item.height = dims.height;
+        } catch (e) { /* ignore */ }
+
         // Upload to Firebase Storage for permanent URL
         const firebaseUrl = await FirebaseSync.uploadImageFromUrl(url, `${item.id}.png`);
         if (firebaseUrl !== url) item.url = firebaseUrl;
@@ -689,6 +696,16 @@ const ImageGenerator = {
         this.generatedImages.unshift(item);
         Storage.addImageToHistory(item);
         FirebaseSync.saveImageRecord(item);
+    },
+
+    getImageDimensions(url) {
+        return new Promise((resolve, reject) => {
+            const img = new Image();
+            img.onload = () => resolve({ width: img.naturalWidth, height: img.naturalHeight });
+            img.onerror = reject;
+            img.crossOrigin = 'anonymous';
+            img.src = url;
+        });
     },
 
     addGeneratingCard(id) {
@@ -739,6 +756,7 @@ const ImageGenerator = {
             const card = document.createElement('div');
             card.className = 'image-card';
             const costLabel = img.cost ? `$${img.cost.toFixed(3)}` : '';
+            const dimsLabel = img.width && img.height ? `${img.width}×${img.height}` : '';
             const isFav = img.starred ? 'starred' : '';
             const cleanBtn = img.metaCleaned
                 ? `<button class="btn-card cleaned" title="Metadata Cleaned" data-action="clean-meta" data-idx="${idx}" disabled>✅</button>`
@@ -746,6 +764,7 @@ const ImageGenerator = {
             card.innerHTML = `
                 <img src="${img.url}" alt="Generated" loading="lazy">
                 ${costLabel ? `<span class="card-cost">${costLabel}</span>` : ''}
+                ${dimsLabel ? `<span class="card-dims">${dimsLabel}</span>` : ''}
                 <div class="card-actions-right">
                     <button class="btn-card ${isFav}" title="Favorite" data-action="star" data-idx="${idx}">☆</button>
                     ${cleanBtn}
@@ -759,6 +778,23 @@ const ImageGenerator = {
                     <button class="btn-card" title="Edit / Remix" data-action="remix" data-idx="${idx}">🎬</button>
                 </div>
             `;
+            // Lazy-detect dimensions for old images without them
+            if (!img.width || !img.height) {
+                const cardImg = card.querySelector('img');
+                cardImg.addEventListener('load', () => {
+                    if (cardImg.naturalWidth && cardImg.naturalHeight) {
+                        img.width = cardImg.naturalWidth;
+                        img.height = cardImg.naturalHeight;
+                        const dimsEl = card.querySelector('.card-dims');
+                        if (!dimsEl) {
+                            const span = document.createElement('span');
+                            span.className = 'card-dims';
+                            span.textContent = `${img.width}×${img.height}`;
+                            card.appendChild(span);
+                        }
+                    }
+                });
+            }
             card.addEventListener('click', (e) => {
                 const actionBtn = e.target.closest('[data-action]');
                 if (actionBtn) {
