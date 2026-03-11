@@ -576,21 +576,26 @@ const ImageGenerator = {
                     params.enable_web_search = false;
                 }
 
-                // For WAN 2.6 Image Edit - needs explicit pixel dimensions
+                // For WAN 2.6 Image Edit - needs image_size as "WxH" string
                 if (modelId === 'wan-2.6-image-edit') {
                     params.seed = -1;
                     params.enable_prompt_expansion = false;
                     // Map aspect ratio + resolution to explicit pixel sizes
                     const sizeMap = {
-                        '1k': { '9:16': { width: 576, height: 1024 }, '16:9': { width: 1024, height: 576 }, '1:1': { width: 1024, height: 1024 }, '4:5': { width: 816, height: 1024 }, '3:4': { width: 768, height: 1024 } },
-                        '2k': { '9:16': { width: 1080, height: 1920 }, '16:9': { width: 1920, height: 1080 }, '1:1': { width: 1440, height: 1440 }, '4:5': { width: 1296, height: 1620 }, '3:4': { width: 1260, height: 1680 } },
-                        '4k': { '9:16': { width: 2160, height: 3840 }, '16:9': { width: 3840, height: 2160 }, '1:1': { width: 2880, height: 2880 }, '4:5': { width: 2592, height: 3240 }, '3:4': { width: 2520, height: 3360 } },
+                        '1k': { '9:16': '576x1024', '16:9': '1024x576', '1:1': '1024x1024', '4:5': '816x1024', '3:4': '768x1024' },
+                        '2k': { '9:16': '1080x1920', '16:9': '1920x1080', '1:1': '1440x1440', '4:5': '1296x1620', '3:4': '1260x1680' },
+                        '4k': { '9:16': '2160x3840', '16:9': '3840x2160', '1:1': '2880x2880', '4:5': '2592x3240', '3:4': '2520x3360' },
                     };
-                    const dims = sizeMap[resolution]?.[size];
-                    if (dims) {
-                        params.width = dims.width;
-                        params.height = dims.height;
+                    const imageSize = sizeMap[resolution]?.[size];
+                    if (imageSize) {
+                        params.image_size = imageSize;
+                        params.size = imageSize;
+                        const [w, h] = imageSize.split('x').map(Number);
+                        params.width = w;
+                        params.height = h;
                     }
+                    // Remove generic resolution param that WAN may not understand
+                    delete params.resolution;
                 }
 
                 try {
