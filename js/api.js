@@ -35,7 +35,7 @@ const API = {
         'nano-banana-pro-text-to-image-ultra': { '4k': 0.15,  '8k': 0.18 },
         'nano-banana-pro-edit':                { '1k': 0.14,  '2k': 0.14,  '4k': 0.24 },
         'nano-banana-pro-edit-ultra':          { '4k': 0.15,  '8k': 0.18 },
-        'wan-2.6-image-edit':                  { '1k': 0.07,  '2k': 0.07,  '4k': 0.07 },
+        'wan-2.6-image-edit':                  { '1k': 0.07,  '2k': 0.07 },
     },
 
     VIDEO_PRICING: {
@@ -244,17 +244,15 @@ const API = {
     },
 
     // Ensure image meets minimum dimension requirements (e.g. WAN 2.6 needs 240-8000px)
-    // Returns a Promise that resolves to a valid image URL/dataUrl (upscaled if needed)
     ensureMinDimensions(imageUrl, minSize = 240) {
-        return new Promise((resolve, reject) => {
+        return new Promise((resolve) => {
             const img = new Image();
             img.crossOrigin = 'anonymous';
             img.onload = () => {
                 if (img.naturalWidth >= minSize && img.naturalHeight >= minSize) {
-                    resolve(imageUrl); // already valid
+                    resolve(imageUrl);
                     return;
                 }
-                // Scale up to meet minimum
                 const scale = Math.max(minSize / img.naturalWidth, minSize / img.naturalHeight);
                 const newW = Math.round(img.naturalWidth * scale);
                 const newH = Math.round(img.naturalHeight * scale);
@@ -266,7 +264,46 @@ const API = {
                 console.log(`[ensureMinDimensions] Upscaled ${img.naturalWidth}x${img.naturalHeight} → ${newW}x${newH}`);
                 resolve(canvas.toDataURL('image/png'));
             };
-            img.onerror = () => resolve(imageUrl); // fallback on error
+            img.onerror = () => resolve(imageUrl);
+            img.src = imageUrl;
+        });
+    },
+
+    // Resize image to exact target dimensions (for models like WAN 2.6 that derive output size from input)
+    resizeImageToTarget(imageUrl, targetWidth, targetHeight) {
+        return new Promise((resolve) => {
+            const img = new Image();
+            img.crossOrigin = 'anonymous';
+            img.onload = () => {
+                // If already at or above target, don't resize
+                if (img.naturalWidth >= targetWidth && img.naturalHeight >= targetHeight) {
+                    resolve(imageUrl);
+                    return;
+                }
+                const canvas = document.createElement('canvas');
+                canvas.width = targetWidth;
+                canvas.height = targetHeight;
+                const ctx = canvas.getContext('2d');
+                // Draw image covering the canvas (center crop + scale)
+                const srcRatio = img.naturalWidth / img.naturalHeight;
+                const tgtRatio = targetWidth / targetHeight;
+                let sw, sh, sx, sy;
+                if (srcRatio > tgtRatio) {
+                    sh = img.naturalHeight;
+                    sw = sh * tgtRatio;
+                    sx = (img.naturalWidth - sw) / 2;
+                    sy = 0;
+                } else {
+                    sw = img.naturalWidth;
+                    sh = sw / tgtRatio;
+                    sx = 0;
+                    sy = (img.naturalHeight - sh) / 2;
+                }
+                ctx.drawImage(img, sx, sy, sw, sh, 0, 0, targetWidth, targetHeight);
+                console.log(`[resizeImageToTarget] ${img.naturalWidth}x${img.naturalHeight} → ${targetWidth}x${targetHeight}`);
+                resolve(canvas.toDataURL('image/png'));
+            };
+            img.onerror = () => resolve(imageUrl);
             img.src = imageUrl;
         });
     }

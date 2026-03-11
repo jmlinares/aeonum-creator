@@ -576,15 +576,13 @@ const ImageGenerator = {
                     params.enable_web_search = false;
                 }
 
-                // For WAN 2.6 Image Edit - needs image_size as "WxH" string
+                // For WAN 2.6 Image Edit - output size derived from input images
                 if (modelId === 'wan-2.6-image-edit') {
                     params.seed = -1;
                     params.enable_prompt_expansion = false;
-                    // Map aspect ratio + resolution to explicit pixel sizes
                     const sizeMap = {
                         '1k': { '9:16': '576x1024', '16:9': '1024x576', '1:1': '1024x1024', '4:5': '816x1024', '3:4': '768x1024' },
                         '2k': { '9:16': '1080x1920', '16:9': '1920x1080', '1:1': '1440x1440', '4:5': '1296x1620', '3:4': '1260x1680' },
-                        '4k': { '9:16': '3072x5504', '16:9': '5504x3072', '1:1': '4096x4096', '4:5': '3072x3840', '3:4': '3072x4096' },
                     };
                     const imageSize = sizeMap[resolution]?.[size];
                     if (imageSize) {
@@ -593,8 +591,13 @@ const ImageGenerator = {
                         const [w, h] = imageSize.split('x').map(Number);
                         params.width = w;
                         params.height = h;
+                        // Resize reference images to target dimensions so output matches
+                        if (params.images && params.images.length > 0) {
+                            params.images = await Promise.all(
+                                params.images.map(url => API.resizeImageToTarget(url, w, h))
+                            );
+                        }
                     }
-                    // Remove generic resolution param that WAN may not understand
                     delete params.resolution;
                 }
 
