@@ -156,13 +156,18 @@ const API = {
 
             if (status === 'completed' || status === 'succeeded') {
                 return data;
-            } else if (status === 'failed' || status === 'error') {
-                throw new Error(`Generation failed: ${data.error || data.data?.error || 'Unknown error'}`);
+            } else if (status === 'failed' || status === 'error' || status === 'canceled' || status === 'cancelled') {
+                throw new Error(`Generation failed: ${data.error || data.data?.error || status}`);
             }
             // Also check if outputs are already available (some models skip status)
             const outputs = data.data?.outputs || data.data?.output || data.outputs || data.output;
             if (outputs && (Array.isArray(outputs) ? outputs.length > 0 : outputs)) {
                 return data;
+            }
+
+            // Warn on unknown status
+            if (status && !['pending', 'processing', 'queued', 'starting', 'in_progress'].includes(status)) {
+                console.warn(`[Poll] Unknown status: "${status}"`, data);
             }
 
             // Wait 2 seconds before next poll
