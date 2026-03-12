@@ -30,7 +30,7 @@ const API = {
     IMAGE_PRICING: {
         'nano-banana-text-to-image':           { '1k': 0.038, '2k': 0.038, '4k': 0.038 },
         'nano-banana-edit':                    { '1k': 0.038, '2k': 0.038, '4k': 0.038 },
-        'nano-banana-2-edit':                  { '1k': 0.07,  '2k': 0.07,  '4k': 0.14 },
+        'nano-banana-2-edit':                  { '1k': 0.07,  '2k': 0.10,  '4k': 0.14 },
         'nano-banana-pro-text-to-image':       { '1k': 0.14,  '2k': 0.14,  '4k': 0.24 },
         'nano-banana-pro-text-to-image-ultra': { '4k': 0.15,  '8k': 0.18 },
         'nano-banana-pro-edit':                { '1k': 0.14,  '2k': 0.14,  '4k': 0.24 },
