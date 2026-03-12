@@ -252,6 +252,10 @@ const API = {
 
     // Ensure image meets minimum dimension requirements (e.g. WAN 2.6 needs 240-8000px)
     ensureMinDimensions(imageUrl, minSize = 240) {
+        // Skip processing for remote URLs (Firebase, CDN, etc.) — send directly to API
+        if (imageUrl.startsWith('http')) {
+            return Promise.resolve(imageUrl);
+        }
         return new Promise((resolve) => {
             const img = new Image();
             img.crossOrigin = 'anonymous';
