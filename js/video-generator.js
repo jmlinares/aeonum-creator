@@ -22,6 +22,7 @@ const VideoGenerator = {
     loadModelState() {
         const modelId = Storage.getSelectedVideoModel();
         this.updateModelDisplay(modelId);
+        this.updateUIForModel(modelId);
     },
 
     updateModelDisplay(modelId) {
