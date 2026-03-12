@@ -126,6 +126,8 @@ const API = {
         const url = `${this.WAVESPEED_BASE}/predictions/${requestId}/result`;
         const startTime = Date.now();
         const MAX_POLL_TIME = 1800000; // 30 min timeout
+        let networkErrors = 0;
+        const MAX_NETWORK_ERRORS = 10; // allow up to 10 consecutive network failures before giving up
 
         while (true) {
             if (this._cancelledRequests.has(requestId)) {
@@ -141,33 +143,59 @@ const API = {
                 throw new Error('Generation timed out after 30 minutes');
             }
 
-            const response = await fetch(url, {
-                headers: { 'Authorization': `Bearer ${apiKey}` }
-            });
+            try {
+                const response = await fetch(url, {
+                    headers: { 'Authorization': `Bearer ${apiKey}` }
+                });
 
-            if (!response.ok) {
-                const err = await response.text();
-                throw new Error(`Polling error (${response.status}): ${err}`);
-            }
+                if (!response.ok) {
+                    // Don't throw on transient server errors (5xx), retry instead
+                    if (response.status >= 500) {
+                        networkErrors++;
+                        console.warn(`[Poll ${requestId}] Server error ${response.status}, retry ${networkErrors}/${MAX_NETWORK_ERRORS}`);
+                        if (networkErrors >= MAX_NETWORK_ERRORS) {
+                            throw new Error(`Server error ${response.status} after ${MAX_NETWORK_ERRORS} retries`);
+                        }
+                        await new Promise(r => setTimeout(r, 3000));
+                        continue;
+                    }
+                    const err = await response.text();
+                    throw new Error(`Polling error (${response.status}): ${err}`);
+                }
 
-            const data = await response.json();
-            const status = data.status || data.data?.status;
-            console.log(`[Poll ${requestId}] status: ${status}`, data);
+                // Reset network error counter on success
+                networkErrors = 0;
 
-            if (status === 'completed' || status === 'succeeded') {
-                return data;
-            } else if (status === 'failed' || status === 'error' || status === 'canceled' || status === 'cancelled') {
-                throw new Error(`Generation failed: ${data.error || data.data?.error || status}`);
-            }
-            // Also check if outputs are already available (some models skip status)
-            const outputs = data.data?.outputs || data.data?.output || data.outputs || data.output;
-            if (outputs && (Array.isArray(outputs) ? outputs.length > 0 : outputs)) {
-                return data;
-            }
+                const data = await response.json();
+                const status = data.status || data.data?.status;
+                console.log(`[Poll ${requestId}] status: ${status}`);
 
-            // Warn on unknown status
-            if (status && !['pending', 'processing', 'queued', 'starting', 'in_progress'].includes(status)) {
-                console.warn(`[Poll] Unknown status: "${status}"`, data);
+                if (status === 'completed' || status === 'succeeded') {
+                    return data;
+                } else if (status === 'failed' || status === 'error' || status === 'canceled' || status === 'cancelled') {
+                    throw new Error(`Generation failed: ${data.error || data.data?.error || status}`);
+                }
+                // Also check if outputs are already available (some models skip status)
+                const outputs = data.data?.outputs || data.data?.output || data.outputs || data.output;
+                if (outputs && (Array.isArray(outputs) ? outputs.length > 0 : outputs)) {
+                    return data;
+                }
+
+                // Warn on unknown status
+                if (status && !['pending', 'processing', 'queued', 'starting', 'in_progress'].includes(status)) {
+                    console.warn(`[Poll] Unknown status: "${status}"`, data);
+                }
+            } catch (err) {
+                // Network/fetch error — retry instead of crashing
+                if (err.message === 'CANCELLED') throw err;
+                if (err.message.includes('Generation failed') || err.message.includes('Polling error')) throw err;
+                networkErrors++;
+                console.warn(`[Poll ${requestId}] Network error, retry ${networkErrors}/${MAX_NETWORK_ERRORS}:`, err.message);
+                if (networkErrors >= MAX_NETWORK_ERRORS) {
+                    throw new Error(`Network error after ${MAX_NETWORK_ERRORS} retries: ${err.message}`);
+                }
+                await new Promise(r => setTimeout(r, 3000));
+                continue;
             }
 
             // Wait 2 seconds before next poll
