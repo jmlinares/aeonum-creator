@@ -123,7 +123,7 @@ const API = {
         const apiKey = Storage.getWavespeedKey();
         const url = `${this.WAVESPEED_BASE}/predictions/${requestId}/result`;
         const startTime = Date.now();
-        const MAX_POLL_TIME = 900000; // 15 min timeout
+        const MAX_POLL_TIME = 1800000; // 30 min timeout
 
         while (true) {
             if (this._cancelledRequests.has(requestId)) {
@@ -136,7 +136,7 @@ const API = {
             if (onProgress) onProgress(elapsed);
 
             if (elapsedMs > MAX_POLL_TIME) {
-                throw new Error('Generation timed out after 15 minutes');
+                throw new Error('Generation timed out after 30 minutes');
             }
 
             const response = await fetch(url, {
