@@ -317,17 +317,22 @@ const ImageGenerator = {
                 const subtab = tab.dataset.subtab;
                 const genGrid = document.getElementById('imgGenerationGrid');
                 const charManager = document.getElementById('imgCharacterManager');
+                const envManager = document.getElementById('imgEnvironmentManager');
                 const colManager = document.getElementById('imgCollectionsManager');
                 const searchBar = document.getElementById('imgSearchBar');
 
                 genGrid.classList.add('hidden');
                 charManager.classList.add('hidden');
+                envManager.classList.add('hidden');
                 colManager.classList.add('hidden');
                 searchBar.classList.add('hidden');
 
                 if (subtab === 'character') {
                     charManager.classList.remove('hidden');
                     Characters.renderGrid();
+                } else if (subtab === 'environments') {
+                    envManager.classList.remove('hidden');
+                    Locations.renderGrid();
                 } else if (subtab === 'collections') {
                     colManager.classList.remove('hidden');
                     Collections.renderView();
@@ -346,6 +351,16 @@ const ImageGenerator = {
 
         document.getElementById('btnNewCharacter').addEventListener('click', () => {
             Characters.openEditor(null);
+        });
+
+        // Environment grid events (delegated)
+        document.getElementById('environmentGrid').addEventListener('click', (e) => {
+            const editBtn = e.target.closest('.btn-edit-char');
+            if (editBtn) Locations.openEditor(editBtn.dataset.id);
+        });
+
+        document.getElementById('btnNewEnvironment').addEventListener('click', () => {
+            Locations.openEditor(null);
         });
 
         // Character editor

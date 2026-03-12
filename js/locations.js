@@ -56,6 +56,28 @@ const Locations = {
         return `ABSOLUTE ENVIRONMENT LOCK — The images ${envRefs} are ENVIRONMENT REFERENCE PHOTOS of the location "${loc.name}". The background, setting, and environment in the generated image MUST EXACTLY replicate this specific location. These environment reference images (${envRefs}) define the ENTIRE visual identity of the space: architectural structure, room layout, spatial dimensions, wall colors and textures, flooring material and pattern, ceiling details, lighting fixtures and light temperature, equipment placement and exact models, mirrors and reflective surfaces, signage and branding, decorative elements, window positions, door frames. The generated scene must be IMMEDIATELY RECOGNIZABLE as the SAME SPECIFIC real-world location shown in ${envRefs}. Do NOT substitute with generic or similar-looking environments. Do NOT alter the color palette, equipment brands, lighting temperature, or spatial arrangement. Camera angle and framing may vary but the physical space MUST remain identical to ${envRefs}. `;
     },
 
+    // Render environment grid (sub-tab)
+    renderGrid() {
+        const grid = document.getElementById('environmentGrid');
+        if (!grid) return;
+        grid.innerHTML = '';
+
+        this.getAll().forEach(loc => {
+            const card = document.createElement('div');
+            card.className = 'character-card';
+            const imgs = (loc.images || []).slice(0, 4);
+            card.innerHTML = `
+                <h3>${loc.name}</h3>
+                <div class="character-thumbs" style="margin:8px 0;">
+                    ${imgs.map(url => `<img src="${url}" alt="${loc.name}" style="width:48px;height:48px;object-fit:cover;border-radius:6px;">`).join('')}
+                    ${(loc.images || []).length > 4 ? `<span style="color:var(--text-muted);font-size:11px;">+${(loc.images || []).length - 4} more</span>` : ''}
+                </div>
+                <button class="btn-sm btn-edit-char" data-id="${loc.id}">Edit</button>
+            `;
+            grid.appendChild(card);
+        });
+    },
+
     // Render location dropdown
     renderDropdown() {
         const select = document.getElementById('imgLocationSelect');
