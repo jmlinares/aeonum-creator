@@ -676,12 +676,18 @@
             <button class="btn-sm translator-swap" id="btnTranslatorSwap" title="Swap direction">⇄ Swap</button>
             <label class="section-label" id="translatorInputLabel">Texto en Español</label>
             <textarea class="prompt-input translator-input" id="translatorInput" placeholder="Escribe aquí en español..."></textarea>
+            <div class="translator-actions">
+                <button class="btn-sm" id="btnTranslatorInputClear" title="Clear input">Clear</button>
+                <button class="btn-sm" id="btnTranslatorInputCopy" title="Copy input">Copy</button>
+                <button class="btn-sm" id="btnTranslatorInputUse" title="Paste into active prompt">Use in Prompt</button>
+            </div>
             <button class="btn-generate translator-btn" id="btnTranslate">Traducir</button>
             <label class="section-label" style="margin-top:12px;" id="translatorOutputLabel">English Translation</label>
             <textarea class="prompt-input translator-output" id="translatorOutput" placeholder="Translation will appear here..." readonly></textarea>
             <div class="translator-actions">
-                <button class="btn-sm" id="btnTranslatorCopy" title="Copy translation">Copy</button>
-                <button class="btn-sm" id="btnTranslatorUse" title="Paste into active prompt">Use in Prompt</button>
+                <button class="btn-sm" id="btnTranslatorOutputClear" title="Clear output">Clear</button>
+                <button class="btn-sm" id="btnTranslatorOutputCopy" title="Copy translation">Copy</button>
+                <button class="btn-sm" id="btnTranslatorOutputUse" title="Paste into active prompt">Use in Prompt</button>
             </div>
         </div>
     </div>

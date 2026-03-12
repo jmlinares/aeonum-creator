@@ -185,21 +185,45 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    document.getElementById('btnTranslatorCopy').addEventListener('click', () => {
-        const text = document.getElementById('translatorOutput').value;
-        if (text) {
-            navigator.clipboard.writeText(text);
+    // --- Input textarea buttons ---
+    document.getElementById('btnTranslatorInputClear').addEventListener('click', () => {
+        document.getElementById('translatorInput').value = '';
+    });
+
+    document.getElementById('btnTranslatorInputCopy').addEventListener('click', () => {
+        const text = document.getElementById('translatorInput').value;
+        if (text) navigator.clipboard.writeText(text);
+    });
+
+    document.getElementById('btnTranslatorInputUse').addEventListener('click', () => {
+        const text = document.getElementById('translatorInput').value;
+        if (!text) return;
+        const imgTab = document.getElementById('image-generator');
+        const vidTab = document.getElementById('video-generator');
+        if (imgTab.classList.contains('active')) {
+            const ta = document.getElementById('imgPrompt');
+            ta.value = ta.value ? ta.value + '\n' + text : text;
+        } else if (vidTab.classList.contains('active')) {
+            const ta = document.getElementById('vidPrompt');
+            ta.value = ta.value ? ta.value + '\n' + text : text;
         }
     });
 
-    document.getElementById('btnTranslatorUse').addEventListener('click', () => {
+    // --- Output textarea buttons ---
+    document.getElementById('btnTranslatorOutputClear').addEventListener('click', () => {
+        document.getElementById('translatorOutput').value = '';
+    });
+
+    document.getElementById('btnTranslatorOutputCopy').addEventListener('click', () => {
+        const text = document.getElementById('translatorOutput').value;
+        if (text) navigator.clipboard.writeText(text);
+    });
+
+    document.getElementById('btnTranslatorOutputUse').addEventListener('click', () => {
         const text = document.getElementById('translatorOutput').value;
         if (!text) return;
-
-        // Paste into whichever prompt is visible
         const imgTab = document.getElementById('image-generator');
         const vidTab = document.getElementById('video-generator');
-
         if (imgTab.classList.contains('active')) {
             const ta = document.getElementById('imgPrompt');
             ta.value = ta.value ? ta.value + '\n' + text : text;
