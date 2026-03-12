@@ -134,6 +134,22 @@ const VideoGenerator = {
 
         // Generate
         document.getElementById('btnVidGenerate').addEventListener('click', () => this.generate());
+
+        // Video info modal
+        document.getElementById('btnCloseVideoInfo').addEventListener('click', () => {
+            document.getElementById('modalVideoInfo').classList.add('hidden');
+        });
+        document.getElementById('btnVideoInfoClose').addEventListener('click', () => {
+            document.getElementById('modalVideoInfo').classList.add('hidden');
+        });
+        document.getElementById('btnVideoInfoCopyPrompt').addEventListener('click', () => {
+            if (this._infoPrompt) {
+                navigator.clipboard.writeText(this._infoPrompt);
+                const btn = document.getElementById('btnVideoInfoCopyPrompt');
+                btn.textContent = 'Copied!';
+                setTimeout(() => btn.textContent = 'Copy Prompt', 1500);
+            }
+        });
     },
 
     updateUIForModel(modelId) {
@@ -416,7 +432,7 @@ const VideoGenerator = {
                 if (action === 'play') this.playVideo(i);
                 else if (action === 'download') this.downloadVideo(i);
                 else if (action === 'delete') this.deleteVideo(i);
-                else if (action === 'info') alert(`Model: ${vid.model}\nPrompt: ${vid.prompt}`);
+                else if (action === 'info') this.showVideoInfo(i);
             });
 
             grid.appendChild(card);
@@ -439,6 +455,31 @@ const VideoGenerator = {
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
+    },
+
+    showVideoInfo(idx) {
+        const vid = this.generatedVideos[idx];
+        if (!vid) return;
+
+        const container = document.getElementById('videoInfoContent');
+        const rows = [
+            { label: 'Model', value: vid.model || '—' },
+            { label: 'Aspect Ratio', value: vid.aspect || '—' },
+            { label: 'Duration', value: vid.duration ? `${vid.duration}s` : '—' },
+            { label: 'Cost', value: vid.cost ? `$${vid.cost.toFixed(2)}` : '—' },
+            { label: 'Generated', value: vid.timestamp ? new Date(vid.timestamp).toLocaleString() : '—' },
+        ];
+
+        container.innerHTML = rows.map(r =>
+            `<div class="detail-row"><span>${r.label}:</span><span class="detail-value">${r.value}</span></div>`
+        ).join('') +
+            `<div class="detail-row" style="flex-direction:column;align-items:flex-start;margin-top:8px;">
+                <label style="margin-bottom:4px;">Prompt:</label>
+                <p class="detail-prompt" style="white-space:pre-wrap;max-height:300px;overflow-y:auto;">${vid.prompt || '—'}</p>
+            </div>`;
+
+        this._infoPrompt = vid.prompt || '';
+        document.getElementById('modalVideoInfo').classList.remove('hidden');
     },
 
     deleteVideo(idx) {
