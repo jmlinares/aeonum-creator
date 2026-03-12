@@ -104,16 +104,24 @@ const VideoGenerator = {
             sourceDrop.classList.add('drag-over');
         });
         sourceDrop.addEventListener('dragleave', () => sourceDrop.classList.remove('drag-over'));
-        sourceDrop.addEventListener('drop', (e) => {
+        sourceDrop.addEventListener('drop', async (e) => {
             e.preventDefault();
+            e.stopPropagation();
             sourceDrop.classList.remove('drag-over');
-            // Check if a URL was dropped
-            const textData = e.dataTransfer.getData('text/plain') || '';
+
+            // Try files first (local drag from desktop)
+            if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                const file = e.dataTransfer.files[0];
+                if (file.type.startsWith('image/') || file.name.match(/\.(png|jpg|jpeg|webp|gif)$/i)) {
+                    await this.setSourceImage(file);
+                    return;
+                }
+            }
+            // Fallback: check for URL
+            const textData = e.dataTransfer.getData('text/plain') || e.dataTransfer.getData('text/uri-list') || '';
             if (textData.startsWith('http')) {
                 this.setSourceImageFromUrl(textData);
-                return;
             }
-            if (e.dataTransfer.files[0]) this.setSourceImage(e.dataTransfer.files[0]);
         });
         sourceFile.addEventListener('change', (e) => {
             if (e.target.files[0]) this.setSourceImage(e.target.files[0]);
