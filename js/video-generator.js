@@ -158,6 +158,19 @@ const VideoGenerator = {
         const durationSelect = document.getElementById('vidDuration');
         const isSora = modelId.startsWith('sora-2');
 
+        // Hide "Extender" tab — no current model supports it
+        const extendTab = document.querySelector('.mode-tab[data-mode="extend"]');
+        if (extendTab) extendTab.style.display = 'none';
+
+        // If currently on extend mode, switch back to default
+        if (this.currentMode === 'extend') {
+            this.currentMode = modelId.includes('image-to-video') || modelId.includes('reference-to-video')
+                ? 'image-to-video' : 'text-to-video';
+            document.querySelectorAll('.mode-tab').forEach(t => t.classList.remove('active'));
+            const defaultTab = document.querySelector(`.mode-tab[data-mode="${this.currentMode}"]`);
+            if (defaultTab) defaultTab.classList.add('active');
+        }
+
         // Image-to-video and reference models need source image section
         if (modelId.includes('image-to-video') || modelId.includes('reference-to-video')) {
             sourceSection.classList.remove('hidden');
