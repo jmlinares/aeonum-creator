@@ -656,6 +656,11 @@ const ImageGenerator = {
                         imageUrls.push(ref.dataUrl);
                     }
 
+                    // API limit: max 14 images
+                    if (imageUrls.length > 14) {
+                        imageUrls.length = 14;
+                    }
+
                     if (imageUrls.length > 0) {
                         // Ensure all images meet minimum dimension requirements (240px for WAN 2.6, etc.)
                         params.images = await Promise.all(

@@ -47,9 +47,11 @@ const Locations = {
         const locImages = loc.images || [];
         if (locImages.length === 0) return '';
 
-        // Build explicit @img references for the environment images
+        // Build explicit @img references, respecting 14 image API limit
         const startIdx = charImageCount + 1;
-        const envRefs = locImages.map((_, i) => `@img${startIdx + i}`).join(', ');
+        const maxLocImages = Math.min(locImages.length, 14 - charImageCount);
+        if (maxLocImages <= 0) return '';
+        const envRefs = Array.from({ length: maxLocImages }, (_, i) => `@img${startIdx + i}`).join(', ');
 
         return `ABSOLUTE ENVIRONMENT LOCK — The images ${envRefs} are ENVIRONMENT REFERENCE PHOTOS of the location "${loc.name}". The background, setting, and environment in the generated image MUST EXACTLY replicate this specific location. These environment reference images (${envRefs}) define the ENTIRE visual identity of the space: architectural structure, room layout, spatial dimensions, wall colors and textures, flooring material and pattern, ceiling details, lighting fixtures and light temperature, equipment placement and exact models, mirrors and reflective surfaces, signage and branding, decorative elements, window positions, door frames. The generated scene must be IMMEDIATELY RECOGNIZABLE as the SAME SPECIFIC real-world location shown in ${envRefs}. Do NOT substitute with generic or similar-looking environments. Do NOT alter the color palette, equipment brands, lighting temperature, or spatial arrangement. Camera angle and framing may vary but the physical space MUST remain identical to ${envRefs}. `;
     },
