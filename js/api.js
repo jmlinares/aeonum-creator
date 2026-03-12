@@ -7,6 +7,7 @@ const API = {
     IMAGE_MODELS: {
         'nano-banana-text-to-image':           '/google/nano-banana/text-to-image',
         'nano-banana-edit':                    '/google/nano-banana/edit',
+        'nano-banana-2-text-to-image':         '/google/nano-banana-2/text-to-image',
         'nano-banana-2-edit':                  '/google/nano-banana-2/edit',
         'nano-banana-pro-text-to-image':       '/google/nano-banana-pro/text-to-image',
         'nano-banana-pro-text-to-image-ultra': '/google/nano-banana-pro/text-to-image-ultra',
@@ -30,6 +31,7 @@ const API = {
     IMAGE_PRICING: {
         'nano-banana-text-to-image':           { '1k': 0.038, '2k': 0.038, '4k': 0.038 },
         'nano-banana-edit':                    { '1k': 0.038, '2k': 0.038, '4k': 0.038 },
+        'nano-banana-2-text-to-image':         { '0.5k': 0.035, '1k': 0.07, '2k': 0.10, '4k': 0.14 },
         'nano-banana-2-edit':                  { '1k': 0.07,  '2k': 0.10,  '4k': 0.14 },
         'nano-banana-pro-text-to-image':       { '1k': 0.14,  '2k': 0.14,  '4k': 0.24 },
         'nano-banana-pro-text-to-image-ultra': { '4k': 0.15,  '8k': 0.18 },
