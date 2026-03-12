@@ -179,9 +179,9 @@ const VideoGenerator = {
             sourceSection.classList.add('hidden');
         }
 
-        // Sora 2 and Kling have built-in audio, no separate audio section needed
-        const isKling = modelId.startsWith('kling-');
-        if (isSora || isKling) {
+        // Sora 2 and Kling 2.6 don't support separate audio/dialogue
+        const isKling26 = modelId === 'kling-2.6-pro-image-to-video';
+        if (isSora || isKling26) {
             audioSection.classList.add('hidden');
         } else {
             audioSection.classList.remove('hidden');
