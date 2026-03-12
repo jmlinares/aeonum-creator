@@ -99,9 +99,20 @@ const VideoGenerator = {
         const sourceFile = document.getElementById('vidSourceFile');
 
         sourceDrop.addEventListener('click', () => sourceFile.click());
-        sourceDrop.addEventListener('dragover', (e) => { e.preventDefault(); });
+        sourceDrop.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            sourceDrop.classList.add('drag-over');
+        });
+        sourceDrop.addEventListener('dragleave', () => sourceDrop.classList.remove('drag-over'));
         sourceDrop.addEventListener('drop', (e) => {
             e.preventDefault();
+            sourceDrop.classList.remove('drag-over');
+            // Check if a URL was dropped
+            const textData = e.dataTransfer.getData('text/plain') || '';
+            if (textData.startsWith('http')) {
+                this.setSourceImageFromUrl(textData);
+                return;
+            }
             if (e.dataTransfer.files[0]) this.setSourceImage(e.dataTransfer.files[0]);
         });
         sourceFile.addEventListener('change', (e) => {
@@ -220,6 +231,13 @@ const VideoGenerator = {
         const dataUrl = await API.fileToBase64(file);
         this.sourceImageData = dataUrl;
         document.getElementById('vidSourceImg').src = dataUrl;
+        document.getElementById('vidSourcePreview').style.display = 'block';
+        document.getElementById('vidSourceDrop').style.display = 'none';
+    },
+
+    setSourceImageFromUrl(url) {
+        this.sourceImageData = url;
+        document.getElementById('vidSourceImg').src = url;
         document.getElementById('vidSourcePreview').style.display = 'block';
         document.getElementById('vidSourceDrop').style.display = 'none';
     },
