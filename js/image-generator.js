@@ -619,6 +619,31 @@ const ImageGenerator = {
             fullPrompt = Locations.buildEnvironmentPrompt(locId, charImgCount) + ' ' + fullPrompt;
         }
 
+        // Check total image count before generating (max 14)
+        if (!API.isTextToImage(modelId)) {
+            let totalImages = 0;
+            let charCount = 0, locCount = 0, omniCount = this.refImages.length;
+            if (charId) {
+                const char = Characters.getById(charId);
+                if (char) {
+                    const imgs = char.images || [];
+                    charCount = imgs.length > 0 ? imgs.length : [char.faceImage, char.bodyImage].filter(Boolean).length;
+                }
+            }
+            if (locId) {
+                locCount = Locations.getImageCount(locId);
+            }
+            totalImages = charCount + locCount + omniCount;
+            if (totalImages > 14) {
+                alert(`Too many reference images (${totalImages}/14 max).\n\n` +
+                    `• Character: ${charCount} images\n` +
+                    `• Environment: ${locCount} images\n` +
+                    `• Omni Reference: ${omniCount} images\n\n` +
+                    `Remove ${totalImages - 14} image(s) from Character, Environment, or Omni Reference before generating.`);
+                return;
+            }
+        }
+
         const btn = document.getElementById('btnImgGenerate');
         this.isGenerating = true;
         this.activeRequestIds = [];
@@ -669,11 +694,6 @@ const ImageGenerator = {
                     // Omni reference images
                     for (const ref of this.refImages) {
                         imageUrls.push(ref.dataUrl);
-                    }
-
-                    // API limit: max 14 images
-                    if (imageUrls.length > 14) {
-                        imageUrls.length = 14;
                     }
 
                     if (imageUrls.length > 0) {
