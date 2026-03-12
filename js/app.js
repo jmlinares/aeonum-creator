@@ -58,6 +58,13 @@ document.addEventListener('DOMContentLoaded', () => {
         Characters.renderDropdown();
         Characters.renderGrid();
     });
+    // Load locations from Firebase
+    FirebaseSync.loadLocations().then(fbLocs => {
+        if (fbLocs && fbLocs.length > 0) {
+            Locations.setAll(fbLocs);
+        }
+        Locations.renderDropdown();
+    });
     ImageGenerator.init();
     VideoGenerator.init();
     StoriesGenerator.init();

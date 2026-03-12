@@ -97,6 +97,23 @@
 
                     <div class="guidance-block">
                         <div class="guidance-header">
+                            <span class="guidance-dot green"></span>
+                            <span>LOCATION</span>
+                        </div>
+                        <div class="character-select-row">
+                            <select class="select-input" id="imgLocationSelect">
+                                <option value="">--- None ---</option>
+                            </select>
+                            <button class="btn-char-add" id="btnLocAddQuick" title="New Location">+</button>
+                        </div>
+                        <div class="identity-lock-info" id="locationLockInfo" style="display:none;">
+                            <div class="character-thumbs" id="locationThumbs"></div>
+                            <span class="lock-badge" style="color:#22c55e;">🔒 Environment Lock active</span>
+                        </div>
+                    </div>
+
+                    <div class="guidance-block">
+                        <div class="guidance-header">
                             <span class="guidance-dot blue"></span>
                             <span>Omni Reference</span>
                         </div>
@@ -582,6 +599,37 @@
         </div>
     </div>
 
+    <!-- Location Editor Modal -->
+    <div class="modal-overlay hidden" id="modalLocEditor">
+        <div class="modal">
+            <h2 id="locEditorTitle">New Location</h2>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Location Name</label>
+                    <input type="text" class="form-input" id="locName" placeholder="e.g. My Gym, Studio, Office">
+                </div>
+                <div class="form-group">
+                    <label>Reference Images</label>
+                    <small style="display:block;margin-bottom:8px;color:var(--text-muted)">Drop photos of the location from different angles</small>
+                    <div class="dropzone" id="locDropzone">
+                        <div class="dropzone-icons">
+                            <span>▣</span><span>☆</span><span>♟</span>
+                        </div>
+                        <p>Drag & drop up to 14 images</p>
+                        <small>Different angles, lighting, details, equipment, etc.</small>
+                        <input type="file" id="locFileInput" multiple accept="image/*" style="display:none">
+                    </div>
+                    <div class="char-images-preview" id="locImagesPreview"></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-sm" id="btnLocCancel">Cancel</button>
+                <button class="btn-sm btn-danger hidden" id="btnLocDelete">Delete</button>
+                <button class="btn-sm btn-accent" id="btnLocSave">Save</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Collection Editor Modal -->
     <div class="modal-overlay hidden" id="modalCollectionEditor">
         <div class="modal">
@@ -656,6 +704,7 @@
     <script src="js/api.js"></script>
     <script src="js/storage.js"></script>
     <script src="js/characters.js"></script>
+    <script src="js/locations.js"></script>
     <script src="js/collections.js"></script>
     <script src="js/stories-generator.js"></script>
     <script src="js/image-generator.js"></script>

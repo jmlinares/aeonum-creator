@@ -272,5 +272,54 @@ const FirebaseSync = {
             console.error('Firestore load stories error:', err);
             return [];
         }
+    },
+
+    // ===== FIRESTORE - LOCATIONS =====
+
+    async saveLocation(loc, onProgress) {
+        if (!this.initialized) return;
+        try {
+            const total = (loc.images || []).length;
+            let done = 0;
+            const uploadPromises = (loc.images || []).map((img, i) => {
+                if (img && img.startsWith('data:')) {
+                    return this.uploadCharacterImage(img, loc.id, i).then(url => {
+                        done++;
+                        if (onProgress) onProgress(done, total);
+                        return url;
+                    });
+                } else {
+                    done++;
+                    if (onProgress) onProgress(done, total);
+                    return Promise.resolve(img);
+                }
+            });
+            const uploadedImages = await Promise.all(uploadPromises);
+            const locToSave = { ...loc, images: uploadedImages };
+            await this.db.collection('locations').doc(loc.id).set(locToSave);
+            loc.images = uploadedImages;
+        } catch (err) {
+            console.error('Firestore save location error:', err);
+        }
+    },
+
+    async deleteLocation(id) {
+        if (!this.initialized) return;
+        try {
+            await this.db.collection('locations').doc(id).delete();
+        } catch (err) {
+            console.error('Firestore delete location error:', err);
+        }
+    },
+
+    async loadLocations() {
+        if (!this.initialized) return [];
+        try {
+            const snap = await this.db.collection('locations').get();
+            return snap.docs.map(d => d.data());
+        } catch (err) {
+            console.error('Firestore load locations error:', err);
+            return [];
+        }
     }
 };

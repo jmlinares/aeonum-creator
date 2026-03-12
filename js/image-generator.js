@@ -129,7 +129,7 @@ const ImageGenerator = {
             const pos = promptInput.selectionStart;
             const val = promptInput.value;
             // Find if cursor is inside an @imgN token
-            const regex = /@img\d+/g;
+            const regex = /@(img|env)\d+/g;
             let match;
             while ((match = regex.exec(val)) !== null) {
                 const start = match.index;
@@ -247,6 +247,58 @@ const ImageGenerator = {
             Characters.openEditor(null);
         });
 
+        // Location select
+        document.getElementById('imgLocationSelect').addEventListener('change', (e) => {
+            const locId = e.target.value;
+            const info = document.getElementById('locationLockInfo');
+            const thumbs = document.getElementById('locationThumbs');
+
+            if (locId) {
+                const loc = Locations.getById(locId);
+                thumbs.innerHTML = '';
+                (loc.images || []).forEach(url => {
+                    const img = document.createElement('img');
+                    img.src = url;
+                    thumbs.appendChild(img);
+                });
+                info.style.display = 'flex';
+            } else {
+                info.style.display = 'none';
+            }
+            this.relabelRefImages();
+            this.renderRefPreviews();
+        });
+
+        // Quick add location
+        document.getElementById('btnLocAddQuick').addEventListener('click', () => {
+            Locations.openEditor(null);
+        });
+
+        // Location editor
+        document.getElementById('btnLocSave').addEventListener('click', () => Locations.saveFromEditor());
+        document.getElementById('btnLocCancel').addEventListener('click', () => Locations.closeEditor());
+        document.getElementById('btnLocDelete').addEventListener('click', () => Locations.deleteFromEditor());
+
+        // Location dropzone
+        const locDropzone = document.getElementById('locDropzone');
+        const locFileInput = document.getElementById('locFileInput');
+
+        locDropzone.addEventListener('click', () => locFileInput.click());
+        locDropzone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            locDropzone.classList.add('drag-over');
+        });
+        locDropzone.addEventListener('dragleave', () => locDropzone.classList.remove('drag-over'));
+        locDropzone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            locDropzone.classList.remove('drag-over');
+            Locations.addEditImages(e.dataTransfer.files);
+        });
+        locFileInput.addEventListener('change', (e) => {
+            Locations.addEditImages(e.target.files);
+            locFileInput.value = '';
+        });
+
         // Generate / Cancel
         document.getElementById('btnImgGenerate').addEventListener('click', () => {
             if (this.isGenerating) {
@@ -362,12 +414,22 @@ const ImageGenerator = {
     },
 
     getCharImageCount() {
+        let count = 0;
+        // Character images
         const charId = document.getElementById('imgCharacterSelect')?.value;
-        if (!charId) return 0;
-        const char = Characters.getById(charId);
-        if (!char) return 0;
-        const imgs = char.images || [];
-        return imgs.length > 0 ? imgs.length : [char.faceImage, char.bodyImage].filter(Boolean).length;
+        if (charId) {
+            const char = Characters.getById(charId);
+            if (char) {
+                const imgs = char.images || [];
+                count += imgs.length > 0 ? imgs.length : [char.faceImage, char.bodyImage].filter(Boolean).length;
+            }
+        }
+        // Location images
+        const locId = document.getElementById('imgLocationSelect')?.value;
+        if (locId) {
+            count += Locations.getImageCount(locId);
+        }
+        return count;
     },
 
     relabelRefImages() {
@@ -427,6 +489,16 @@ const ImageGenerator = {
                     : [char.faceImage, char.bodyImage].filter(Boolean);
                 imgs.forEach((url, i) => {
                     refs.push({ label: `@img${i + 1}`, thumb: url, source: char.name });
+                });
+            }
+        }
+        // Location images
+        const locId = document.getElementById('imgLocationSelect')?.value;
+        if (locId) {
+            const loc = Locations.getById(locId);
+            if (loc && loc.images) {
+                loc.images.forEach((url, i) => {
+                    refs.push({ label: `@img${refs.length + 1}`, thumb: url, source: loc.name });
                 });
             }
         }
@@ -492,7 +564,7 @@ const ImageGenerator = {
             .replace(/&/g, '&amp;')
             .replace(/</g, '&lt;')
             .replace(/>/g, '&gt;')
-            .replace(/@img\d+/g, '<span class="mention-tag">$&</span>');
+            .replace(/@(img|env)\d+/g, '<span class="mention-tag">$&</span>');
         highlightDiv.innerHTML = escaped + '\n';
     },
 
@@ -512,11 +584,15 @@ const ImageGenerator = {
         const resolution = document.querySelector('#imgResolution .btn-toggle.active').dataset.value;
         const count = parseInt(document.getElementById('imgCount').value);
         const charId = document.getElementById('imgCharacterSelect').value;
+        const locId = document.getElementById('imgLocationSelect').value;
 
-        // Build full prompt with identity lock
+        // Build full prompt with identity lock + environment lock
         let fullPrompt = prompt;
         if (charId) {
-            fullPrompt = Characters.buildIdentityPrompt(charId) + ' ' + prompt;
+            fullPrompt = Characters.buildIdentityPrompt(charId) + ' ' + fullPrompt;
+        }
+        if (locId) {
+            fullPrompt = Locations.buildEnvironmentPrompt(locId) + ' ' + fullPrompt;
         }
 
         const btn = document.getElementById('btnImgGenerate');
@@ -555,6 +631,14 @@ const ImageGenerator = {
                             // Backwards compat
                             if (char.faceImage) imageUrls.push(char.faceImage);
                             if (char.bodyImage) imageUrls.push(char.bodyImage);
+                        }
+                    }
+
+                    // Location reference images
+                    if (locId) {
+                        const loc = Locations.getById(locId);
+                        if (loc && loc.images) {
+                            loc.images.forEach(url => imageUrls.push(url));
                         }
                     }
 

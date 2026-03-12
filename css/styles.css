@@ -719,6 +719,7 @@ a:hover { text-decoration: underline; }
 }
 
 .guidance-dot.yellow { background: var(--yellow); }
+.guidance-dot.green { background: var(--success); }
 .guidance-dot.blue { background: var(--blue); }
 
 .character-select-row {
