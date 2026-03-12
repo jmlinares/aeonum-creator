@@ -40,11 +40,18 @@ const Locations = {
         return this.getAll().find(l => l.id === id) || null;
     },
 
-    // Build environment lock prompt prefix
-    buildEnvironmentPrompt(locId) {
+    // Build environment lock prompt prefix with explicit @img references
+    buildEnvironmentPrompt(locId, charImageCount = 0) {
         const loc = this.getById(locId);
         if (!loc) return '';
-        return `ABSOLUTE ENVIRONMENT LOCK — The background and environment must EXACTLY replicate the location shown in the provided environment reference images. Maintain strict visual fidelity to: architectural structure, room layout, spatial dimensions, wall colors and textures, flooring material and pattern, ceiling details, lighting fixtures and light temperature, equipment/furniture placement and exact models, mirrors and reflective surfaces, signage and branding, decorative elements, window positions, door frames. The generated scene must be immediately recognizable as the SAME SPECIFIC location from the references. Do NOT substitute with generic or similar-looking environments. Do NOT alter the color palette, equipment brands, or spatial arrangement. The environment references define 100% of the location identity. Camera angle and framing may vary but the space must remain identical. { "environment_reference": "${loc.name}", "environment_adherence": "STRICT_VISUAL_FIDELITY", "environment_lock": { "priority": "ABSOLUTE", "instruction": "Reproduce the EXACT same location from reference images. Same walls, same floor, same equipment, same lighting, same layout. No generic substitutions." } } `;
+        const locImages = loc.images || [];
+        if (locImages.length === 0) return '';
+
+        // Build explicit @img references for the environment images
+        const startIdx = charImageCount + 1;
+        const envRefs = locImages.map((_, i) => `@img${startIdx + i}`).join(', ');
+
+        return `ABSOLUTE ENVIRONMENT LOCK — The images ${envRefs} are ENVIRONMENT REFERENCE PHOTOS of the location "${loc.name}". The background, setting, and environment in the generated image MUST EXACTLY replicate this specific location. These environment reference images (${envRefs}) define the ENTIRE visual identity of the space: architectural structure, room layout, spatial dimensions, wall colors and textures, flooring material and pattern, ceiling details, lighting fixtures and light temperature, equipment placement and exact models, mirrors and reflective surfaces, signage and branding, decorative elements, window positions, door frames. The generated scene must be IMMEDIATELY RECOGNIZABLE as the SAME SPECIFIC real-world location shown in ${envRefs}. Do NOT substitute with generic or similar-looking environments. Do NOT alter the color palette, equipment brands, lighting temperature, or spatial arrangement. Camera angle and framing may vary but the physical space MUST remain identical to ${envRefs}. `;
     },
 
     // Render location dropdown

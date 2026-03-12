@@ -592,7 +592,16 @@ const ImageGenerator = {
             fullPrompt = Characters.buildIdentityPrompt(charId) + ' ' + fullPrompt;
         }
         if (locId) {
-            fullPrompt = Locations.buildEnvironmentPrompt(locId) + ' ' + fullPrompt;
+            // Calculate character image count for correct @img offset
+            let charImgCount = 0;
+            if (charId) {
+                const char = Characters.getById(charId);
+                if (char) {
+                    const imgs = char.images || [];
+                    charImgCount = imgs.length > 0 ? imgs.length : [char.faceImage, char.bodyImage].filter(Boolean).length;
+                }
+            }
+            fullPrompt = Locations.buildEnvironmentPrompt(locId, charImgCount) + ' ' + fullPrompt;
         }
 
         const btn = document.getElementById('btnImgGenerate');
