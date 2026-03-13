@@ -704,19 +704,20 @@ const ImageGenerator = {
                     }
                 }
 
-                // For Nano Banana 2 Edit
+                // For Nano Banana 2 Edit — output size = input image size, so resize refs to target
                 if (modelId === 'nano-banana-2-edit') {
                     params.enable_web_search = false;
-                    // Force output size to match resolution selection
                     const nb2SizeMap = {
-                        '1k': { '9:16': '768x1376', '16:9': '1376x768', '1:1': '1024x1024', '4:5': '880x1104', '3:4': '896x1152' },
-                        '2k': { '9:16': '1536x2752', '16:9': '2752x1536', '1:1': '2048x2048', '4:5': '1760x2208', '3:4': '1792x2304' },
-                        '4k': { '9:16': '3072x5504', '16:9': '5504x3072', '1:1': '4096x4096', '4:5': '3520x4416', '3:4': '3584x4608' },
+                        '1k': { '9:16': [768, 1376], '16:9': [1376, 768], '1:1': [1024, 1024], '4:5': [880, 1104], '3:4': [896, 1152] },
+                        '2k': { '9:16': [1536, 2752], '16:9': [2752, 1536], '1:1': [2048, 2048], '4:5': [1760, 2208], '3:4': [1792, 2304] },
+                        '4k': { '9:16': [3072, 5504], '16:9': [5504, 3072], '1:1': [4096, 4096], '4:5': [3520, 4416], '3:4': [3584, 4608] },
                     };
-                    const nb2Size = nb2SizeMap[resolution]?.[size];
-                    if (nb2Size) {
-                        params.image_size = nb2Size;
-                        params.size = nb2Size;
+                    const nb2Dims = nb2SizeMap[resolution]?.[size];
+                    if (nb2Dims && params.images && params.images.length > 0) {
+                        const [tw, th] = nb2Dims;
+                        params.images = await Promise.all(
+                            params.images.map(url => API.resizeImageToTarget(url, tw, th))
+                        );
                     }
                 }
 

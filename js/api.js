@@ -310,42 +310,58 @@ const API = {
         });
     },
 
-    // Resize image to exact target dimensions (for models like WAN 2.6 that derive output size from input)
-    resizeImageToTarget(imageUrl, targetWidth, targetHeight) {
-        return new Promise((resolve) => {
-            const img = new Image();
-            img.crossOrigin = 'anonymous';
-            img.onload = () => {
-                // If already at or above target, don't resize
-                if (img.naturalWidth >= targetWidth && img.naturalHeight >= targetHeight) {
-                    resolve(imageUrl);
-                    return;
-                }
-                const canvas = document.createElement('canvas');
-                canvas.width = targetWidth;
-                canvas.height = targetHeight;
-                const ctx = canvas.getContext('2d');
-                // Draw image covering the canvas (center crop + scale)
-                const srcRatio = img.naturalWidth / img.naturalHeight;
-                const tgtRatio = targetWidth / targetHeight;
-                let sw, sh, sx, sy;
-                if (srcRatio > tgtRatio) {
-                    sh = img.naturalHeight;
-                    sw = sh * tgtRatio;
-                    sx = (img.naturalWidth - sw) / 2;
-                    sy = 0;
-                } else {
-                    sw = img.naturalWidth;
-                    sh = sw / tgtRatio;
-                    sx = 0;
-                    sy = (img.naturalHeight - sh) / 2;
-                }
-                ctx.drawImage(img, sx, sy, sw, sh, 0, 0, targetWidth, targetHeight);
-                console.log(`[resizeImageToTarget] ${img.naturalWidth}x${img.naturalHeight} → ${targetWidth}x${targetHeight}`);
-                resolve(canvas.toDataURL('image/png'));
-            };
-            img.onerror = () => resolve(imageUrl);
-            img.src = imageUrl;
-        });
+    // Resize image to exact target dimensions (for models like WAN 2.6, NB2 that derive output size from input)
+    async resizeImageToTarget(imageUrl, targetWidth, targetHeight) {
+        try {
+            // For remote URLs, fetch as blob first to avoid CORS canvas tainting
+            let imgSrc = imageUrl;
+            if (imageUrl.startsWith('http')) {
+                const resp = await fetch(imageUrl);
+                const blob = await resp.blob();
+                imgSrc = await new Promise((res) => {
+                    const reader = new FileReader();
+                    reader.onloadend = () => res(reader.result);
+                    reader.readAsDataURL(blob);
+                });
+            }
+
+            return await new Promise((resolve) => {
+                const img = new Image();
+                img.onload = () => {
+                    // If already at or above target, return as base64 (clean for canvas)
+                    if (img.naturalWidth >= targetWidth && img.naturalHeight >= targetHeight) {
+                        resolve(imgSrc);
+                        return;
+                    }
+                    const canvas = document.createElement('canvas');
+                    canvas.width = targetWidth;
+                    canvas.height = targetHeight;
+                    const ctx = canvas.getContext('2d');
+                    // Draw image covering the canvas (center crop + scale)
+                    const srcRatio = img.naturalWidth / img.naturalHeight;
+                    const tgtRatio = targetWidth / targetHeight;
+                    let sw, sh, sx, sy;
+                    if (srcRatio > tgtRatio) {
+                        sh = img.naturalHeight;
+                        sw = sh * tgtRatio;
+                        sx = (img.naturalWidth - sw) / 2;
+                        sy = 0;
+                    } else {
+                        sw = img.naturalWidth;
+                        sh = sw / tgtRatio;
+                        sx = 0;
+                        sy = (img.naturalHeight - sh) / 2;
+                    }
+                    ctx.drawImage(img, sx, sy, sw, sh, 0, 0, targetWidth, targetHeight);
+                    console.log(`[resizeImageToTarget] ${img.naturalWidth}x${img.naturalHeight} → ${targetWidth}x${targetHeight}`);
+                    resolve(canvas.toDataURL('image/png'));
+                };
+                img.onerror = () => resolve(imgSrc);
+                img.src = imgSrc;
+            });
+        } catch (err) {
+            console.error('[resizeImageToTarget] Error:', err);
+            return imageUrl; // fallback
+        }
     }
 };
