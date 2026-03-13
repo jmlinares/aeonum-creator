@@ -192,30 +192,37 @@ const StoriesGenerator = {
                 delete params.resolution;
             }
 
-            const submitResult = await API.submit(modelId, params);
-            const requestId = submitResult.data?.id || submitResult.id;
+            const genCount = story.count || 1;
+            for (let gi = 0; gi < genCount; gi++) {
+                if (!story.isGenerating) break; // cancelled
 
-            if (!requestId) {
-                // Sync mode
-                const outputs = this._extractOutputs(submitResult);
-                for (const url of outputs) {
-                    const firebaseUrl = await FirebaseSync.uploadImageFromUrl(url, `story_${story.id}_${Date.now()}.png`);
-                    story.images.push({ url: firebaseUrl !== url ? firebaseUrl : url });
+                const submitResult = await API.submit(modelId, params);
+                const requestId = submitResult.data?.id || submitResult.id;
+
+                if (!requestId) {
+                    // Sync mode
+                    const outputs = this._extractOutputs(submitResult);
+                    for (const url of outputs) {
+                        const firebaseUrl = await FirebaseSync.uploadImageFromUrl(url, `story_${story.id}_${Date.now()}.png`);
+                        story.images.push({ url: firebaseUrl !== url ? firebaseUrl : url });
+                    }
+                } else {
+                    // Poll
+                    const result = await API.poll(requestId, (elapsed) => {
+                        story.generatingTime = `${elapsed} (${gi + 1}/${genCount})`;
+                        this.updateGeneratingTime(id, `${elapsed} (${gi + 1}/${genCount})`);
+                    });
+                    const outputs = this._extractOutputs(result);
+                    for (const url of outputs) {
+                        const firebaseUrl = await FirebaseSync.uploadImageFromUrl(url, `story_${story.id}_${Date.now()}.png`);
+                        story.images.push({ url: firebaseUrl !== url ? firebaseUrl : url });
+                    }
                 }
-            } else {
-                // Poll
-                const result = await API.poll(requestId, (elapsed) => {
-                    story.generatingTime = elapsed;
-                    this.updateGeneratingTime(id, elapsed);
-                });
-                const outputs = this._extractOutputs(result);
-                for (const url of outputs) {
-                    const firebaseUrl = await FirebaseSync.uploadImageFromUrl(url, `story_${story.id}_${Date.now()}.png`);
-                    story.images.push({ url: firebaseUrl !== url ? firebaseUrl : url });
-                }
+
+                // Update card after each image
+                story.currentImageIdx = story.images.length - 1;
+                this.renderCard(id);
             }
-
-            story.currentImageIdx = story.images.length - 1;
         } catch (err) {
             if (err.message !== 'CANCELLED') {
                 console.error('[Stories] Generate error:', err);
