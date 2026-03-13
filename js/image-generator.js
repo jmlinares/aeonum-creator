@@ -745,6 +745,21 @@ const ImageGenerator = {
                     delete params.resolution;
                 }
 
+                // For Seedream 4.5 Edit - uses 'size' param (WxH string), no resolution
+                if (modelId === 'seedream-4.5-edit') {
+                    const sdSizeMap = {
+                        '1k': { '9:16': '768x1376', '16:9': '1376x768', '1:1': '1024x1024', '4:5': '880x1104', '3:4': '896x1152' },
+                        '2k': { '9:16': '1536x2752', '16:9': '2752x1536', '1:1': '2048x2048', '4:5': '1760x2208', '3:4': '1792x2304' },
+                        '4k': { '9:16': '3072x5504', '16:9': '5504x3072', '1:1': '4096x4096', '4:5': '3520x4416', '3:4': '3584x4608' },
+                    };
+                    const sdSize = sdSizeMap[resolution]?.[size];
+                    if (sdSize) {
+                        params.size = sdSize;
+                    }
+                    delete params.resolution;
+                    delete params.aspect_ratio;
+                }
+
                 try {
                     console.log(`[Generate ${i+1}/${count}] Submitting params:`, JSON.stringify(params, (k, v) => k === 'images' ? `[${v.length} images]` : v));
                     const submitResult = await API.submit(modelId, params);

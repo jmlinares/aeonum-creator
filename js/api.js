@@ -14,6 +14,7 @@ const API = {
         'nano-banana-pro-edit':                '/google/nano-banana-pro/edit',
         'nano-banana-pro-edit-ultra':          '/google/nano-banana-pro/edit-ultra',
         'wan-2.6-image-edit':                  '/alibaba/wan-2.6/image-edit',
+        'seedream-4.5-edit':                   '/bytedance/seedream-v4.5/edit',
     },
 
     // ===== VIDEO MODELS =====
@@ -38,6 +39,7 @@ const API = {
         'nano-banana-pro-edit':                { '1k': 0.14,  '2k': 0.14,  '4k': 0.24 },
         'nano-banana-pro-edit-ultra':          { '4k': 0.15,  '8k': 0.18 },
         'wan-2.6-image-edit':                  { '1k': 0.07,  '2k': 0.07 },
+        'seedream-4.5-edit':                   { '1k': 0.07,  '2k': 0.07,  '4k': 0.14 },
     },
 
     VIDEO_PRICING: {
