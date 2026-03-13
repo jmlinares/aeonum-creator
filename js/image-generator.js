@@ -704,9 +704,20 @@ const ImageGenerator = {
                     }
                 }
 
-                // For Nano Banana 2 Edit, add enable_web_search
+                // For Nano Banana 2 Edit
                 if (modelId === 'nano-banana-2-edit') {
                     params.enable_web_search = false;
+                    // Force output size to match resolution selection
+                    const nb2SizeMap = {
+                        '1k': { '9:16': '768x1376', '16:9': '1376x768', '1:1': '1024x1024', '4:5': '880x1104', '3:4': '896x1152' },
+                        '2k': { '9:16': '1536x2752', '16:9': '2752x1536', '1:1': '2048x2048', '4:5': '1760x2208', '3:4': '1792x2304' },
+                        '4k': { '9:16': '3072x5504', '16:9': '5504x3072', '1:1': '4096x4096', '4:5': '3520x4416', '3:4': '3584x4608' },
+                    };
+                    const nb2Size = nb2SizeMap[resolution]?.[size];
+                    if (nb2Size) {
+                        params.image_size = nb2Size;
+                        params.size = nb2Size;
+                    }
                 }
 
                 // For WAN 2.6 Image Edit - output size derived from input images
@@ -735,7 +746,7 @@ const ImageGenerator = {
                 }
 
                 try {
-                    console.log(`[Generate ${i+1}/${count}] Submitting...`);
+                    console.log(`[Generate ${i+1}/${count}] Submitting params:`, JSON.stringify(params, (k, v) => k === 'images' ? `[${v.length} images]` : v));
                     const submitResult = await API.submit(modelId, params);
                     const requestId = submitResult.data?.id || submitResult.id;
                     console.log(`[Generate ${i+1}/${count}] requestId: ${requestId}`);
