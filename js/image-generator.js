@@ -697,9 +697,9 @@ const ImageGenerator = {
                     }
 
                     if (imageUrls.length > 0) {
-                        // Ensure all images meet minimum dimension requirements (240px for WAN 2.6, etc.)
+                        // Convert all remote URLs to base64 so WaveSpeed receives actual image data
                         params.images = await Promise.all(
-                            imageUrls.map(url => API.ensureMinDimensions(url, 240))
+                            imageUrls.map(url => API.urlToBase64(url))
                         );
                     }
                 }
