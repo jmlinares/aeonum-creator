@@ -705,19 +705,17 @@ const ImageGenerator = {
                     }
                 }
 
-                // For Nano Banana 2 Edit — match WaveSpeed playground exactly
-                // Playground only sends: images, prompt, resolution, enable_web_search
-                // Extra params like output_format, aspect_ratio may cause resolution to be ignored
+                // For Nano Banana 2 Edit — match WaveSpeed playground
+                // NB2 uses: images, prompt, resolution, aspect_ratio, enable_web_search
+                // Only output_format is extra and should be removed
                 if (modelId === 'nano-banana-2-edit') {
                     params.enable_web_search = false;
                     delete params.output_format;
-                    delete params.aspect_ratio;
                 }
 
                 // For Nano Banana 2 Text-to-Image — same cleanup
                 if (modelId === 'nano-banana-2-text-to-image') {
                     delete params.output_format;
-                    delete params.aspect_ratio;
                 }
 
                 // For WAN 2.6 Image Edit - output size derived from input images

@@ -174,15 +174,13 @@ const StoriesGenerator = {
                 }
             }
 
-            // Model-specific params — match WaveSpeed playground exactly
+            // Model-specific params — match WaveSpeed playground
             if (modelId === 'nano-banana-2-edit') {
                 params.enable_web_search = false;
                 delete params.output_format;
-                delete params.aspect_ratio;
             }
             if (modelId === 'nano-banana-2-text-to-image') {
                 delete params.output_format;
-                delete params.aspect_ratio;
             }
             if (modelId === 'wan-2.6-image-edit') {
                 params.seed = -1;
