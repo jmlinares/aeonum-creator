@@ -221,6 +221,19 @@ const StoriesGenerator = {
                 if (sdSize) params.size = sdSize;
             }
 
+            // Qwen Image Edit 2511: images(max 3), prompt, size(WxH), seed, output_format
+            if (modelId === 'qwen-image-edit-2511') {
+                delete params.aspect_ratio;
+                delete params.resolution;
+                params.seed = -1;
+                const qwSizeMap = {
+                    '9:16': '768x1376', '16:9': '1376x768', '1:1': '1024x1024',
+                    '4:5': '880x1104', '3:4': '896x1152'
+                };
+                const qwSize = qwSizeMap[story.aspectRatio];
+                if (qwSize) params.size = qwSize;
+            }
+
             const genCount = story.count || 1;
             for (let gi = 0; gi < genCount; gi++) {
                 if (!story.isGenerating) break; // cancelled

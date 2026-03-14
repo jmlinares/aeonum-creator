@@ -785,6 +785,22 @@ const ImageGenerator = {
                     if (sdSize) params.size = sdSize;
                 }
 
+                // --- Qwen Image Edit 2511 ---
+                // Accepts: images(max 3), prompt, size(WxH), seed, output_format(jpeg/png/webp)
+                // NO resolution, NO aspect_ratio
+                if (modelId === 'qwen-image-edit-2511') {
+                    delete params.aspect_ratio;
+                    delete params.resolution;
+                    params.seed = -1;
+                    // Map aspect ratio + resolution to WxH size
+                    const qwSizeMap = {
+                        '9:16': '768x1376', '16:9': '1376x768', '1:1': '1024x1024',
+                        '4:5': '880x1104', '3:4': '896x1152'
+                    };
+                    const qwSize = qwSizeMap[size];
+                    if (qwSize) params.size = qwSize;
+                }
+
                 try {
                     console.log(`[Generate ${i+1}/${count}] Submitting params:`, JSON.stringify(params, (k, v) => k === 'images' ? `[${v.length} images]` : v));
                     const submitResult = await API.submit(modelId, params);

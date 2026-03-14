@@ -15,6 +15,7 @@ const API = {
         'nano-banana-pro-edit-ultra':          '/google/nano-banana-pro/edit-ultra',
         'wan-2.6-image-edit':                  '/alibaba/wan-2.6/image-edit',
         'seedream-4.5-edit':                   '/bytedance/seedream-v4.5/edit',
+        'qwen-image-edit-2511':                '/wavespeed-ai/qwen-image/edit-2511',
     },
 
     // ===== VIDEO MODELS =====
@@ -45,6 +46,8 @@ const API = {
         'wan-2.6-image-edit':                  { '1k': 0.07,  '2k': 0.07 },
         // Seedream 4.5: no resolution param — size via 'size' WxH string
         'seedream-4.5-edit':                   { '1k': 0.07,  '2k': 0.07,  '4k': 0.14 },
+        // Qwen Image Edit 2511: size via 'size' WxH, flat price
+        'qwen-image-edit-2511':                { 'flat': 0.02 },
     },
 
     VIDEO_PRICING: {
@@ -86,6 +89,7 @@ const API = {
     // Max reference images per model (from official docs)
     getMaxImages(modelId) {
         if (modelId === 'wan-2.6-image-edit') return 3;
+        if (modelId === 'qwen-image-edit-2511') return 3;
         if (modelId === 'nano-banana-edit') return 10;
         if (modelId === 'seedream-4.5-edit') return 10;
         return 14; // NB2, NBP default
