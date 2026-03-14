@@ -342,6 +342,31 @@
             <div class="stories-toolbar">
                 <div class="stories-toolbar-left">
                     <h2 class="stories-title">📸 Stories Generator</h2>
+                    <div class="stories-model-selector">
+                        <label class="stories-model-label">Model:</label>
+                        <select class="stories-model-select" id="storiesModelSelect">
+                            <optgroup label="Nano Banana">
+                                <option value="nano-banana-text-to-image">NB - Text to Image — $0.038</option>
+                                <option value="nano-banana-edit">NB - Edit — $0.038</option>
+                            </optgroup>
+                            <optgroup label="Nano Banana Pro">
+                                <option value="nano-banana-pro-text-to-image">NBP - T2I — $0.14</option>
+                                <option value="nano-banana-pro-text-to-image-ultra">NBP - T2I Ultra — $0.15</option>
+                                <option value="nano-banana-pro-edit">NBP - Edit — $0.14</option>
+                                <option value="nano-banana-pro-edit-ultra">NBP - Edit Ultra — $0.15</option>
+                            </optgroup>
+                            <optgroup label="Nano Banana 2">
+                                <option value="nano-banana-2-text-to-image">NB2 - Text to Image — $0.07</option>
+                                <option value="nano-banana-2-edit" selected>NB2 - Edit — $0.07</option>
+                            </optgroup>
+                            <optgroup label="WAN 2.6">
+                                <option value="wan-2.6-image-edit">WAN 2.6 - Edit — $0.07</option>
+                            </optgroup>
+                            <optgroup label="Seedream 4.5">
+                                <option value="seedream-4.5-edit">Seedream 4.5 - Edit — $0.07</option>
+                            </optgroup>
+                        </select>
+                    </div>
                     <button class="btn-sm btn-accent" id="btnAddStory">+ Add Story</button>
                     <button class="btn-sm btn-generate-all" id="btnGenerateAll">⚡ Generate All</button>
                 </div>

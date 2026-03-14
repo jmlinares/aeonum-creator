@@ -26,6 +26,16 @@ const StoriesGenerator = {
 
         document.getElementById('btnClearApproved').addEventListener('click', () => this.clearApproved());
 
+        // Global model selector — persist selection
+        const modelSelect = document.getElementById('storiesModelSelect');
+        const savedModel = Storage.get('stories_model', 'nano-banana-2-edit');
+        if (modelSelect) {
+            modelSelect.value = savedModel;
+            modelSelect.addEventListener('change', () => {
+                Storage.set('stories_model', modelSelect.value);
+            });
+        }
+
         // Scroll arrows
         document.getElementById('btnStoriesScrollLeft').addEventListener('click', () => {
             document.getElementById('storiesScroll').scrollBy({ left: -370, behavior: 'smooth' });
@@ -131,7 +141,7 @@ const StoriesGenerator = {
 
         if (!story.prompt.trim()) return alert('Write a prompt for this story');
 
-        const modelId = Storage.getSelectedImageModel();
+        const modelId = document.getElementById('storiesModelSelect').value;
         story.isGenerating = true;
         this.renderCard(id);
 
@@ -149,7 +159,7 @@ const StoriesGenerator = {
                 resolution: story.resolution
             };
 
-            // Add character images for edit models
+            // Add character images for edit models — upload to CDN
             if (!API.isTextToImage(modelId) && story.characterId) {
                 const char = Characters.getById(story.characterId);
                 if (char) {
@@ -158,15 +168,21 @@ const StoriesGenerator = {
                         : [char.faceImage, char.bodyImage].filter(Boolean);
                     if (charImages.length > 0) {
                         params.images = await Promise.all(
-                            charImages.map(url => API.ensureMinDimensions(url, 240))
+                            charImages.map(url => API.uploadImageToCDN(url))
                         );
                     }
                 }
             }
 
-            // Model-specific params
+            // Model-specific params — match WaveSpeed playground exactly
             if (modelId === 'nano-banana-2-edit') {
                 params.enable_web_search = false;
+                delete params.output_format;
+                delete params.aspect_ratio;
+            }
+            if (modelId === 'nano-banana-2-text-to-image') {
+                delete params.output_format;
+                delete params.aspect_ratio;
             }
             if (modelId === 'wan-2.6-image-edit') {
                 params.seed = -1;
@@ -182,7 +198,6 @@ const StoriesGenerator = {
                     const [w, h] = imageSize.split('x').map(Number);
                     params.width = w;
                     params.height = h;
-                    // Resize reference images to target so output matches
                     if (params.images && params.images.length > 0) {
                         params.images = await Promise.all(
                             params.images.map(url => API.resizeImageToTarget(url, w, h))
@@ -190,6 +205,17 @@ const StoriesGenerator = {
                     }
                 }
                 delete params.resolution;
+            }
+            if (modelId === 'seedream-4.5-edit') {
+                const sdSizeMap = {
+                    '1k': { '9:16': '768x1376', '16:9': '1376x768', '1:1': '1024x1024', '4:5': '880x1104', '3:4': '896x1152' },
+                    '2k': { '9:16': '1536x2752', '16:9': '2752x1536', '1:1': '2048x2048', '4:5': '1760x2208', '3:4': '1792x2304' },
+                    '4k': { '9:16': '2736x4864', '16:9': '4864x2736', '1:1': '4096x4096', '4:5': '3648x4560', '3:4': '3536x4720' },
+                };
+                const sdSize = sdSizeMap[story.resolution]?.[story.aspectRatio];
+                if (sdSize) params.size = sdSize;
+                delete params.resolution;
+                delete params.aspect_ratio;
             }
 
             const genCount = story.count || 1;
