@@ -246,6 +246,28 @@ const API = {
         return data.data?.download_url || data.download_url;
     },
 
+    // Upload any image (base64 data URL, remote URL, or blob) to WaveSpeed CDN
+    async uploadImageToCDN(imageUrl) {
+        // If already a WaveSpeed CDN URL, return as-is
+        if (imageUrl.startsWith('https://cdn.wavespeed.ai') || imageUrl.startsWith('https://storage.wavespeed.ai')) {
+            return imageUrl;
+        }
+
+        let blob;
+        if (imageUrl.startsWith('data:')) {
+            // Convert base64 data URL to blob
+            const res = await fetch(imageUrl);
+            blob = await res.blob();
+        } else {
+            // Fetch remote URL as blob
+            const res = await fetch(imageUrl);
+            blob = await res.blob();
+        }
+
+        const file = new File([blob], 'image.png', { type: blob.type || 'image/png' });
+        return this.uploadFile(file);
+    },
+
     // ========== BALANCE ==========
     async getBalance() {
         const apiKey = Storage.getWavespeedKey();

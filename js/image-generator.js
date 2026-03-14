@@ -697,9 +697,10 @@ const ImageGenerator = {
                     }
 
                     if (imageUrls.length > 0) {
-                        // Convert all remote URLs to base64 so WaveSpeed receives actual image data
+                        // Upload all images to WaveSpeed CDN to avoid 30MB request limit
+                        // This matches how the WaveSpeed playground sends images
                         params.images = await Promise.all(
-                            imageUrls.map(url => API.urlToBase64(url))
+                            imageUrls.map(url => API.uploadImageToCDN(url))
                         );
                     }
                 }
