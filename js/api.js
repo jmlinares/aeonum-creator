@@ -255,13 +255,22 @@ const API = {
 
         let blob;
         if (imageUrl.startsWith('data:')) {
-            // Convert base64 data URL to blob
-            const res = await fetch(imageUrl);
-            blob = await res.blob();
+            // Convert base64 data URL to blob directly (no fetch needed)
+            const parts = imageUrl.split(',');
+            const mime = parts[0].match(/:(.*?);/)[1];
+            const b64 = atob(parts[1]);
+            const arr = new Uint8Array(b64.length);
+            for (let i = 0; i < b64.length; i++) arr[i] = b64.charCodeAt(i);
+            blob = new Blob([arr], { type: mime });
         } else {
             // Fetch remote URL as blob
-            const res = await fetch(imageUrl);
-            blob = await res.blob();
+            try {
+                const res = await fetch(imageUrl);
+                blob = await res.blob();
+            } catch (err) {
+                console.warn('[uploadImageToCDN] Fetch failed, returning URL as-is:', err.message);
+                return imageUrl;
+            }
         }
 
         const file = new File([blob], 'image.png', { type: blob.type || 'image/png' });
