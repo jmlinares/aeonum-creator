@@ -46,6 +46,21 @@ const ImageGenerator = {
         const container = document.getElementById('imgResolution');
         const resolutions = API.getAvailableResolutions(modelId);
         container.innerHTML = '';
+
+        // If model has no resolution (flat pricing), hide resolution row
+        const resRow = container.closest('.setting-row') || container.parentElement;
+        if (resolutions.length === 1 && resolutions[0] === 'flat') {
+            if (resRow) resRow.style.display = 'none';
+            // Add hidden active button so code doesn't break
+            const btn = document.createElement('button');
+            btn.className = 'btn-toggle active';
+            btn.dataset.value = '';
+            btn.style.display = 'none';
+            container.appendChild(btn);
+            return;
+        }
+        if (resRow) resRow.style.display = '';
+
         resolutions.forEach((res, i) => {
             const btn = document.createElement('button');
             btn.className = 'btn-toggle' + (i === 0 ? ' active' : '');
@@ -619,8 +634,9 @@ const ImageGenerator = {
             fullPrompt = Locations.buildEnvironmentPrompt(locId, charImgCount) + ' ' + fullPrompt;
         }
 
-        // Check total image count before generating (max 14)
+        // Check total image count before generating (per-model max from API docs)
         if (!API.isTextToImage(modelId)) {
+            const maxImages = API.getMaxImages(modelId);
             let totalImages = 0;
             let charCount = 0, locCount = 0, omniCount = this.refImages.length;
             if (charId) {
@@ -634,12 +650,12 @@ const ImageGenerator = {
                 locCount = Locations.getImageCount(locId);
             }
             totalImages = charCount + locCount + omniCount;
-            if (totalImages > 14) {
-                alert(`Too many reference images (${totalImages}/14 max).\n\n` +
+            if (totalImages > maxImages) {
+                alert(`Too many reference images (${totalImages}/${maxImages} max for this model).\n\n` +
                     `• Character: ${charCount} images\n` +
                     `• Environment: ${locCount} images\n` +
                     `• Omni Reference: ${omniCount} images\n\n` +
-                    `Remove ${totalImages - 14} image(s) from Character, Environment, or Omni Reference before generating.`);
+                    `Remove ${totalImages - maxImages} image(s) before generating.`);
                 return;
             }
         }
@@ -705,57 +721,68 @@ const ImageGenerator = {
                     }
                 }
 
-                // For Nano Banana 2 Edit — match WaveSpeed playground
-                // NB2 uses: images, prompt, resolution, aspect_ratio, enable_web_search
-                // Only output_format is extra and should be removed
-                if (modelId === 'nano-banana-2-edit') {
-                    params.enable_web_search = false;
-                    delete params.output_format;
-                }
+                // ===== MODEL-SPECIFIC PARAMS (per official WaveSpeed API docs) =====
 
-                // For Nano Banana 2 Text-to-Image — same cleanup
-                if (modelId === 'nano-banana-2-text-to-image') {
-                    delete params.output_format;
-                }
-
-                // For WAN 2.6 Image Edit - output size derived from input images
-                if (modelId === 'wan-2.6-image-edit') {
-                    params.seed = -1;
-                    params.enable_prompt_expansion = false;
-                    const sizeMap = {
-                        '1k': { '9:16': '576x1024', '16:9': '1024x576', '1:1': '1024x1024', '4:5': '816x1024', '3:4': '768x1024' },
-                        '2k': { '9:16': '1080x1920', '16:9': '1920x1080', '1:1': '1440x1440', '4:5': '1296x1620', '3:4': '1260x1680' },
-                    };
-                    const imageSize = sizeMap[resolution]?.[size];
-                    if (imageSize) {
-                        params.image_size = imageSize;
-                        params.size = imageSize;
-                        const [w, h] = imageSize.split('x').map(Number);
-                        params.width = w;
-                        params.height = h;
-                        // Resize reference images to target dimensions so output matches
-                        if (params.images && params.images.length > 0) {
-                            params.images = await Promise.all(
-                                params.images.map(url => API.resizeImageToTarget(url, w, h))
-                            );
-                        }
-                    }
+                // --- Nano Banana (NB) Edit/T2I ---
+                // Accepts: prompt, aspect_ratio, output_format. NO resolution param.
+                if (modelId === 'nano-banana-edit' || modelId === 'nano-banana-text-to-image') {
                     delete params.resolution;
                 }
 
-                // For Seedream 4.5 Edit - uses 'size' param (WxH string), no resolution
+                // --- Nano Banana Pro (NBP) Edit/T2I ---
+                // Accepts: prompt, aspect_ratio, resolution(1k/2k/4k), output_format, images
+                // All default params are correct, nothing to change.
+
+                // --- Nano Banana Pro (NBP) Ultra Edit/T2I ---
+                // Accepts: prompt, aspect_ratio, resolution(4k/8k), output_format, images
+                // All default params are correct, nothing to change.
+
+                // --- Nano Banana 2 (NB2) Edit ---
+                // Accepts: images, prompt, aspect_ratio, resolution(0.5k/1k/2k/4k), output_format, enable_web_search
+                if (modelId === 'nano-banana-2-edit') {
+                    params.enable_web_search = false;
+                }
+
+                // --- Nano Banana 2 (NB2) Text-to-Image ---
+                // Accepts: prompt, aspect_ratio, resolution(0.5k/1k/2k/4k), output_format, enable_web_search
+                // All default params are correct, nothing to change.
+
+                // --- WAN 2.6 Image Edit ---
+                // Accepts ONLY: images(max 3), prompt, seed, enable_prompt_expansion
+                // NO resolution, NO aspect_ratio, NO output_format
+                if (modelId === 'wan-2.6-image-edit') {
+                    delete params.output_format;
+                    delete params.aspect_ratio;
+                    delete params.resolution;
+                    params.seed = -1;
+                    params.enable_prompt_expansion = false;
+                    // WAN output size = input image size, so resize inputs to desired dimensions
+                    const wanSizeMap = {
+                        '1k': { '9:16': [576, 1024], '16:9': [1024, 576], '1:1': [1024, 1024], '4:5': [816, 1024], '3:4': [768, 1024] },
+                        '2k': { '9:16': [1080, 1920], '16:9': [1920, 1080], '1:1': [1440, 1440], '4:5': [1296, 1620], '3:4': [1260, 1680] },
+                    };
+                    const wanDims = wanSizeMap[resolution]?.[size];
+                    if (wanDims && params.images && params.images.length > 0) {
+                        params.images = await Promise.all(
+                            params.images.map(url => API.resizeImageToTarget(url, wanDims[0], wanDims[1]))
+                        );
+                    }
+                }
+
+                // --- Seedream 4.5 Edit ---
+                // Accepts ONLY: images(max 10), prompt, size(WxH string, 512-8192 per dim)
+                // NO resolution, NO aspect_ratio, NO output_format
                 if (modelId === 'seedream-4.5-edit') {
+                    delete params.output_format;
+                    delete params.aspect_ratio;
+                    delete params.resolution;
                     const sdSizeMap = {
                         '1k': { '9:16': '768x1376', '16:9': '1376x768', '1:1': '1024x1024', '4:5': '880x1104', '3:4': '896x1152' },
                         '2k': { '9:16': '1536x2752', '16:9': '2752x1536', '1:1': '2048x2048', '4:5': '1760x2208', '3:4': '1792x2304' },
                         '4k': { '9:16': '2736x4864', '16:9': '4864x2736', '1:1': '4096x4096', '4:5': '3648x4560', '3:4': '3536x4720' },
                     };
                     const sdSize = sdSizeMap[resolution]?.[size];
-                    if (sdSize) {
-                        params.size = sdSize;
-                    }
-                    delete params.resolution;
-                    delete params.aspect_ratio;
+                    if (sdSize) params.size = sdSize;
                 }
 
                 try {

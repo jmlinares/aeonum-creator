@@ -174,37 +174,44 @@ const StoriesGenerator = {
                 }
             }
 
-            // Model-specific params — match WaveSpeed playground
-            if (modelId === 'nano-banana-2-edit') {
-                params.enable_web_search = false;
-                delete params.output_format;
-            }
-            if (modelId === 'nano-banana-2-text-to-image') {
-                delete params.output_format;
-            }
-            if (modelId === 'wan-2.6-image-edit') {
-                params.seed = -1;
-                params.enable_prompt_expansion = false;
-                const sizeMap = {
-                    '1k': { '9:16': '576x1024', '16:9': '1024x576', '1:1': '1024x1024', '4:5': '816x1024', '3:4': '768x1024' },
-                    '2k': { '9:16': '1080x1920', '16:9': '1920x1080', '1:1': '1440x1440', '4:5': '1296x1620', '3:4': '1260x1680' },
-                };
-                const imageSize = sizeMap[story.resolution]?.[story.aspectRatio];
-                if (imageSize) {
-                    params.image_size = imageSize;
-                    params.size = imageSize;
-                    const [w, h] = imageSize.split('x').map(Number);
-                    params.width = w;
-                    params.height = h;
-                    if (params.images && params.images.length > 0) {
-                        params.images = await Promise.all(
-                            params.images.map(url => API.resizeImageToTarget(url, w, h))
-                        );
-                    }
-                }
+            // ===== MODEL-SPECIFIC PARAMS (per official WaveSpeed API docs) =====
+
+            // NB Edit/T2I: NO resolution param
+            if (modelId === 'nano-banana-edit' || modelId === 'nano-banana-text-to-image') {
                 delete params.resolution;
             }
+
+            // NB2 Edit: add enable_web_search
+            if (modelId === 'nano-banana-2-edit') {
+                params.enable_web_search = false;
+            }
+
+            // NBP, NBP Ultra, NB2 T2I: all default params are correct
+
+            // WAN 2.6: ONLY images, prompt, seed, enable_prompt_expansion
+            if (modelId === 'wan-2.6-image-edit') {
+                delete params.output_format;
+                delete params.aspect_ratio;
+                delete params.resolution;
+                params.seed = -1;
+                params.enable_prompt_expansion = false;
+                const wanSizeMap = {
+                    '1k': { '9:16': [576, 1024], '16:9': [1024, 576], '1:1': [1024, 1024], '4:5': [816, 1024], '3:4': [768, 1024] },
+                    '2k': { '9:16': [1080, 1920], '16:9': [1920, 1080], '1:1': [1440, 1440], '4:5': [1296, 1620], '3:4': [1260, 1680] },
+                };
+                const wanDims = wanSizeMap[story.resolution]?.[story.aspectRatio];
+                if (wanDims && params.images && params.images.length > 0) {
+                    params.images = await Promise.all(
+                        params.images.map(url => API.resizeImageToTarget(url, wanDims[0], wanDims[1]))
+                    );
+                }
+            }
+
+            // Seedream 4.5: ONLY images, prompt, size(WxH)
             if (modelId === 'seedream-4.5-edit') {
+                delete params.output_format;
+                delete params.aspect_ratio;
+                delete params.resolution;
                 const sdSizeMap = {
                     '1k': { '9:16': '768x1376', '16:9': '1376x768', '1:1': '1024x1024', '4:5': '880x1104', '3:4': '896x1152' },
                     '2k': { '9:16': '1536x2752', '16:9': '2752x1536', '1:1': '2048x2048', '4:5': '1760x2208', '3:4': '1792x2304' },
@@ -212,8 +219,6 @@ const StoriesGenerator = {
                 };
                 const sdSize = sdSizeMap[story.resolution]?.[story.aspectRatio];
                 if (sdSize) params.size = sdSize;
-                delete params.resolution;
-                delete params.aspect_ratio;
             }
 
             const genCount = story.count || 1;

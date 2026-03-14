@@ -30,15 +30,20 @@ const API = {
 
     // ===== PRICING (USD per generation) =====
     IMAGE_PRICING: {
-        'nano-banana-text-to-image':           { '1k': 0.038, '2k': 0.038, '4k': 0.038 },
-        'nano-banana-edit':                    { '1k': 0.038, '2k': 0.038, '4k': 0.038 },
+        // NB: no resolution param — flat price
+        'nano-banana-text-to-image':           { 'flat': 0.038 },
+        'nano-banana-edit':                    { 'flat': 0.038 },
+        // NB2: resolution 0.5k/1k/2k/4k
         'nano-banana-2-text-to-image':         { '0.5k': 0.035, '1k': 0.07, '2k': 0.10, '4k': 0.14 },
         'nano-banana-2-edit':                  { '1k': 0.07,  '2k': 0.10,  '4k': 0.14 },
+        // NBP: resolution 1k/2k/4k
         'nano-banana-pro-text-to-image':       { '1k': 0.14,  '2k': 0.14,  '4k': 0.24 },
         'nano-banana-pro-text-to-image-ultra': { '4k': 0.15,  '8k': 0.18 },
         'nano-banana-pro-edit':                { '1k': 0.14,  '2k': 0.14,  '4k': 0.24 },
         'nano-banana-pro-edit-ultra':          { '4k': 0.15,  '8k': 0.18 },
+        // WAN 2.6: no resolution param — size via input image resize
         'wan-2.6-image-edit':                  { '1k': 0.07,  '2k': 0.07 },
+        // Seedream 4.5: no resolution param — size via 'size' WxH string
         'seedream-4.5-edit':                   { '1k': 0.07,  '2k': 0.07,  '4k': 0.14 },
     },
 
@@ -55,6 +60,7 @@ const API = {
     getImageCost(modelId, resolution) {
         const prices = this.IMAGE_PRICING[modelId];
         if (!prices) return 0;
+        if (prices.flat !== undefined) return prices.flat;
         return prices[resolution] || prices['1k'] || prices['4k'] || 0;
     },
 
@@ -75,6 +81,14 @@ const API = {
     // Determine if a model is text-only (no input image required)
     isTextToImage(modelId) {
         return modelId.includes('text-to-image');
+    },
+
+    // Max reference images per model (from official docs)
+    getMaxImages(modelId) {
+        if (modelId === 'wan-2.6-image-edit') return 3;
+        if (modelId === 'nano-banana-edit') return 10;
+        if (modelId === 'seedream-4.5-edit') return 10;
+        return 14; // NB2, NBP default
     },
 
     // ========== SUBMIT REQUEST ==========
