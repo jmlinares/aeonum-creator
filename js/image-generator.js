@@ -29,28 +29,34 @@ const ImageGenerator = {
         if (missing.length === 0) return;
         console.log(`[Thumbnails] Backfilling ${missing.length} images...`);
 
-        // Process in small batches to avoid overload
+        // Process 3 at a time in parallel for speed
         let idx = 0;
-        const processNext = () => {
-            if (idx >= missing.length) {
-                console.log('[Thumbnails] Backfill complete');
-                return;
-            }
-            const img = missing[idx++];
-            FirebaseSync.uploadThumbnail(img.url, `${img.id}.png`).then(thumbUrl => {
+        let done = 0;
+        const CONCURRENCY = 3;
+
+        const processOne = (img) => {
+            return FirebaseSync.uploadThumbnail(img.url, `${img.id}.png`).then(thumbUrl => {
                 if (thumbUrl) {
                     img.thumbnailUrl = thumbUrl;
                     FirebaseSync.saveImageRecord(img);
                     Storage.updateImageInHistory(img);
-                    // Update card in DOM
                     const cardEl = document.querySelector(`.image-card:not(.generating) img[src="${img.url}"]`);
                     if (cardEl) cardEl.src = thumbUrl;
                 }
-                // Next image after short delay
-                setTimeout(processNext, 300);
-            }).catch(() => setTimeout(processNext, 300));
+            }).catch(() => {}).finally(() => {
+                done++;
+                if (done % 10 === 0 || done === missing.length) {
+                    console.log(`[Thumbnails] ${done}/${missing.length}`);
+                }
+                // Pick up next item
+                if (idx < missing.length) processOne(missing[idx++]);
+            });
         };
-        processNext();
+
+        // Launch initial batch
+        for (let i = 0; i < Math.min(CONCURRENCY, missing.length); i++) {
+            processOne(missing[idx++]);
+        }
     },
 
     loadModelState() {
