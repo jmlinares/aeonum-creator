@@ -245,8 +245,11 @@ const StoriesGenerator = {
                     // Sync mode
                     const outputs = this._extractOutputs(submitResult);
                     for (const url of outputs) {
-                        const firebaseUrl = await FirebaseSync.uploadImageFromUrl(url, `story_${story.id}_${Date.now()}.png`);
-                        story.images.push({ url: firebaseUrl !== url ? firebaseUrl : url });
+                        const storyFileName = `story_${story.id}_${Date.now()}.png`;
+                        const firebaseUrl = await FirebaseSync.uploadImageFromUrl(url, storyFileName);
+                        const finalUrl = firebaseUrl !== url ? firebaseUrl : url;
+                        const thumbUrl = await FirebaseSync.uploadThumbnail(finalUrl, storyFileName);
+                        story.images.push({ url: finalUrl, thumbnailUrl: thumbUrl || finalUrl });
                     }
                 } else {
                     // Poll
@@ -256,8 +259,11 @@ const StoriesGenerator = {
                     });
                     const outputs = this._extractOutputs(result);
                     for (const url of outputs) {
-                        const firebaseUrl = await FirebaseSync.uploadImageFromUrl(url, `story_${story.id}_${Date.now()}.png`);
-                        story.images.push({ url: firebaseUrl !== url ? firebaseUrl : url });
+                        const storyFileName = `story_${story.id}_${Date.now()}.png`;
+                        const firebaseUrl = await FirebaseSync.uploadImageFromUrl(url, storyFileName);
+                        const finalUrl = firebaseUrl !== url ? firebaseUrl : url;
+                        const thumbUrl = await FirebaseSync.uploadThumbnail(finalUrl, storyFileName);
+                        story.images.push({ url: finalUrl, thumbnailUrl: thumbUrl || finalUrl });
                     }
                 }
 
@@ -375,7 +381,7 @@ const StoriesGenerator = {
         } else if (story.images.length > 0) {
             const currentImg = story.images[story.currentImageIdx] || story.images[0];
             imageHTML = `
-                <img src="${currentImg.url}" alt="Story" loading="lazy">
+                <img src="${currentImg.thumbnailUrl || currentImg.url}" alt="Story" loading="lazy">
                 ${story.images.length > 1 ? `<button class="story-img-nav left" data-action="prev-img">❮</button>` : ''}
                 ${story.images.length > 1 ? `<button class="story-img-nav right" data-action="next-img">❯</button>` : ''}
                 <div class="story-image-actions">

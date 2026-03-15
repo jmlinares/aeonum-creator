@@ -55,6 +55,15 @@ const Storage = {
         this.set('image_history', history);
     },
 
+    updateImageInHistory(item) {
+        const history = this.getImageHistory();
+        const idx = history.findIndex(i => i.id === item.id);
+        if (idx >= 0) {
+            history[idx] = { ...history[idx], ...item };
+            this.set('image_history', history);
+        }
+    },
+
     // Generated videos history
     getVideoHistory() {
         return this.get('video_history', []);

@@ -286,7 +286,7 @@ const Collections = {
             card.className = 'image-card';
             const costLabel = img.cost ? `$${img.cost.toFixed(3)}` : '';
             card.innerHTML = `
-                <img src="${img.url}" alt="Collection image" loading="lazy">
+                <img src="${img.thumbnailUrl || img.url}" alt="Collection image" loading="lazy">
                 ${costLabel ? `<span class="card-cost">${costLabel}</span>` : ''}
                 <div class="card-actions-right">
                     <button class="btn-card" title="Remove from collection" data-action="remove-from-col">✕</button>
@@ -318,6 +318,6 @@ const Collections = {
         // Use last added image as cover
         const lastId = col.imageIds[col.imageIds.length - 1];
         const img = ImageGenerator.generatedImages.find(i => i.id === lastId);
-        return img ? img.url : null;
+        return img ? (img.thumbnailUrl || img.url) : null;
     }
 };

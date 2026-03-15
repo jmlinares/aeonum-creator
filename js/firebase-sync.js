@@ -44,6 +44,45 @@ const FirebaseSync = {
         }
     },
 
+    // Generate a thumbnail blob from an image URL (max 400px wide)
+    generateThumbnail(imageUrl, maxWidth = 400) {
+        return new Promise((resolve, reject) => {
+            const img = new Image();
+            img.crossOrigin = 'anonymous';
+            img.onload = () => {
+                const scale = Math.min(1, maxWidth / img.naturalWidth);
+                const w = Math.round(img.naturalWidth * scale);
+                const h = Math.round(img.naturalHeight * scale);
+                const canvas = document.createElement('canvas');
+                canvas.width = w;
+                canvas.height = h;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, w, h);
+                canvas.toBlob((blob) => {
+                    if (blob) resolve(blob);
+                    else reject(new Error('Canvas toBlob failed'));
+                }, 'image/webp', 0.80);
+            };
+            img.onerror = () => reject(new Error('Failed to load image for thumbnail'));
+            img.src = imageUrl;
+        });
+    },
+
+    // Upload thumbnail to Firebase Storage thumbnails/ folder
+    async uploadThumbnail(imageUrl, fileName) {
+        if (!this.initialized) return null;
+        try {
+            const blob = await this.generateThumbnail(imageUrl);
+            const thumbName = fileName.replace(/\.[^.]+$/, '') + '.webp';
+            const ref = this.storage.ref(`thumbnails/${thumbName}`);
+            await ref.put(blob, { contentType: 'image/webp' });
+            return await ref.getDownloadURL();
+        } catch (err) {
+            console.error('Thumbnail upload error:', err);
+            return null;
+        }
+    },
+
     // Upload video from URL to Firebase Storage
     async uploadVideoFromUrl(videoUrl, fileName) {
         if (!this.initialized) return videoUrl;

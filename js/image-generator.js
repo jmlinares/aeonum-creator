@@ -901,6 +901,18 @@ const ImageGenerator = {
         const firebaseUrl = await FirebaseSync.uploadImageFromUrl(url, `${item.id}.png`);
         if (firebaseUrl !== url) item.url = firebaseUrl;
 
+        // Generate and upload thumbnail (non-blocking)
+        FirebaseSync.uploadThumbnail(item.url, `${item.id}.png`).then(thumbUrl => {
+            if (thumbUrl) {
+                item.thumbnailUrl = thumbUrl;
+                FirebaseSync.saveImageRecord(item);
+                Storage.updateImageInHistory(item); // persist thumbnail to localStorage
+                // Update card in DOM if visible
+                const card = document.querySelector(`.image-card:not(.generating) img[src="${item.url}"]`);
+                if (card) card.src = thumbUrl;
+            }
+        });
+
         this.generatedImages.unshift(item);
         Storage.addImageToHistory(item);
         FirebaseSync.saveImageRecord(item);
@@ -969,8 +981,9 @@ const ImageGenerator = {
             const cleanBtn = img.metaCleaned
                 ? `<button class="btn-card cleaned" title="Metadata Cleaned" data-action="clean-meta" data-idx="${idx}" disabled>✅</button>`
                 : `<button class="btn-card" title="Clean Metadata" data-action="clean-meta" data-idx="${idx}">🧹</button>`;
+            const cardSrc = img.thumbnailUrl || img.url;
             card.innerHTML = `
-                <img src="${img.url}" alt="Generated" loading="lazy">
+                <img src="${cardSrc}" alt="Generated" loading="lazy">
                 ${costLabel ? `<span class="card-cost">${costLabel}</span>` : ''}
                 ${dimsLabel ? `<span class="card-dims">${dimsLabel}</span>` : ''}
                 <div class="card-actions-right">
@@ -987,21 +1000,25 @@ const ImageGenerator = {
                 </div>
             `;
             // Lazy-detect dimensions for old images without them
+            // Skip if showing thumbnail (would report thumbnail dims, not real ones)
             if (!img.width || !img.height) {
-                const cardImg = card.querySelector('img');
-                cardImg.addEventListener('load', () => {
-                    if (cardImg.naturalWidth && cardImg.naturalHeight) {
-                        img.width = cardImg.naturalWidth;
-                        img.height = cardImg.naturalHeight;
-                        const dimsEl = card.querySelector('.card-dims');
-                        if (!dimsEl) {
-                            const span = document.createElement('span');
-                            span.className = 'card-dims';
-                            span.textContent = `${img.width}×${img.height}`;
-                            card.appendChild(span);
+                const usingThumbnail = img.thumbnailUrl && img.thumbnailUrl !== img.url;
+                if (!usingThumbnail) {
+                    const cardImg = card.querySelector('img');
+                    cardImg.addEventListener('load', () => {
+                        if (cardImg.naturalWidth && cardImg.naturalHeight) {
+                            img.width = cardImg.naturalWidth;
+                            img.height = cardImg.naturalHeight;
+                            const dimsEl = card.querySelector('.card-dims');
+                            if (!dimsEl) {
+                                const span = document.createElement('span');
+                                span.className = 'card-dims';
+                                span.textContent = `${img.width}×${img.height}`;
+                                card.appendChild(span);
+                            }
                         }
-                    }
-                });
+                    });
+                }
             }
             card.addEventListener('click', (e) => {
                 const actionBtn = e.target.closest('[data-action]');
