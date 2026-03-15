@@ -20,6 +20,37 @@ const ImageGenerator = {
         this.renderGrid();
         this.loadModelState();
         this.bindEvents();
+        this.backfillThumbnails();
+    },
+
+    // Generate thumbnails for existing images that don't have one yet
+    backfillThumbnails() {
+        const missing = this.generatedImages.filter(img => img.url && !img.thumbnailUrl);
+        if (missing.length === 0) return;
+        console.log(`[Thumbnails] Backfilling ${missing.length} images...`);
+
+        // Process in small batches to avoid overload
+        let idx = 0;
+        const processNext = () => {
+            if (idx >= missing.length) {
+                console.log('[Thumbnails] Backfill complete');
+                return;
+            }
+            const img = missing[idx++];
+            FirebaseSync.uploadThumbnail(img.url, `${img.id}.png`).then(thumbUrl => {
+                if (thumbUrl) {
+                    img.thumbnailUrl = thumbUrl;
+                    FirebaseSync.saveImageRecord(img);
+                    Storage.updateImageInHistory(img);
+                    // Update card in DOM
+                    const cardEl = document.querySelector(`.image-card:not(.generating) img[src="${img.url}"]`);
+                    if (cardEl) cardEl.src = thumbUrl;
+                }
+                // Next image after short delay
+                setTimeout(processNext, 300);
+            }).catch(() => setTimeout(processNext, 300));
+        };
+        processNext();
     },
 
     loadModelState() {
