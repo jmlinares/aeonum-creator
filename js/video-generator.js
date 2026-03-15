@@ -3,6 +3,8 @@
 const VideoGenerator = {
     currentMode: 'text-to-video',
     sourceImageData: null, // base64 dataUrl for image-to-video
+    motionVideoData: null, // base64 dataUrl or CDN URL for motion control
+    motionVideoFile: null, // File object for motion control upload
     refImages: [], // for reference-to-video (up to 3)
     generatedVideos: [],
 
@@ -37,6 +39,8 @@ const VideoGenerator = {
             'sora-2-image-to-video':        { badge: 'SORA', name: 'Sora 2 - Image to Video' },
             'kling-3.0-pro-image-to-video': { badge: 'K3P',  name: 'Kling 3.0 Pro - Image to Video' },
             'kling-2.6-pro-image-to-video': { badge: 'K26',  name: 'Kling 2.6 Pro - Image to Video' },
+            'kling-2.6-pro-motion-control': { badge: 'MOT',  name: 'Kling 2.6 Pro - Motion Control' },
+            'kling-3.0-std-motion-control': { badge: 'M30',  name: 'Kling 3.0 Std - Motion Control' },
         };
 
         const m = models[modelId] || models['veo-3.1-text-to-video'];
@@ -112,7 +116,9 @@ const VideoGenerator = {
             // Try files first (local drag from desktop)
             if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
                 const file = e.dataTransfer.files[0];
-                if (file.type.startsWith('image/') || file.name.match(/\.(png|jpg|jpeg|webp|gif)$/i)) {
+                const isImage = file.type.startsWith('image/') || file.name.match(/\.(png|jpg|jpeg|webp|gif)$/i);
+                const isVideo = file.type.startsWith('video/') || file.name.match(/\.(mp4|mov)$/i);
+                if (isImage || isVideo) {
                     await this.setSourceImage(file);
                     return;
                 }
@@ -131,6 +137,64 @@ const VideoGenerator = {
             this.sourceImageData = null;
             document.getElementById('vidSourcePreview').style.display = 'none';
             document.getElementById('vidSourceDrop').style.display = 'block';
+        });
+
+        // Motion control: video upload
+        const motionDrop = document.getElementById('vidMotionDrop');
+        const motionFile = document.getElementById('vidMotionFile');
+
+        motionDrop.addEventListener('click', () => motionFile.click());
+        motionDrop.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            motionDrop.classList.add('drag-over');
+        });
+        motionDrop.addEventListener('dragleave', () => motionDrop.classList.remove('drag-over'));
+        motionDrop.addEventListener('drop', async (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            motionDrop.classList.remove('drag-over');
+            if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                const file = e.dataTransfer.files[0];
+                if (file.type.startsWith('video/') || file.name.match(/\.(mp4|mov)$/i)) {
+                    await this.setMotionVideo(file);
+                    return;
+                }
+            }
+            const textData = e.dataTransfer.getData('text/plain') || '';
+            if (textData.startsWith('http')) this.setMotionVideoFromUrl(textData);
+        });
+        motionFile.addEventListener('change', (e) => {
+            if (e.target.files[0]) this.setMotionVideo(e.target.files[0]);
+        });
+
+        document.getElementById('btnRemoveVidMotion').addEventListener('click', () => {
+            this.motionVideoData = null;
+            this.motionVideoFile = null;
+            document.getElementById('vidMotionPreview').style.display = 'none';
+            document.getElementById('vidMotionDrop').style.display = 'block';
+        });
+
+        // Motion control: character orientation toggle
+        document.querySelectorAll('#vidCharOrientation .btn-toggle').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('#vidCharOrientation .btn-toggle').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                const orientation = btn.dataset.value;
+                const sourceSection = document.getElementById('vidSourceImageSection');
+                const sourceFileInput = document.getElementById('vidSourceFile');
+                sourceSection.classList.remove('hidden');
+                if (orientation === 'image') {
+                    sourceSection.querySelector('.section-label').textContent = 'Character Image';
+                    sourceFileInput.accept = 'image/*';
+                } else {
+                    sourceSection.querySelector('.section-label').textContent = 'Character Video';
+                    sourceFileInput.accept = 'video/mp4,video/quicktime,video/*';
+                }
+                // Clear current source when switching orientation
+                this.sourceImageData = null;
+                document.getElementById('vidSourcePreview').style.display = 'none';
+                document.getElementById('vidSourceDrop').style.display = 'block';
+            });
         });
 
         // Prompt actions
@@ -176,7 +240,10 @@ const VideoGenerator = {
         const sourceSection = document.getElementById('vidSourceImageSection');
         const audioSection = document.getElementById('vidAudioSection');
         const durationSelect = document.getElementById('vidDuration');
+        const motionOrientationSection = document.getElementById('vidMotionOrientationSection');
+        const motionVideoSection = document.getElementById('vidMotionVideoSection');
         const isSora = modelId.startsWith('sora-2');
+        const isMotionControl = modelId.includes('motion-control');
 
         // Hide "Extender" tab — no current model supports it
         const extendTab = document.querySelector('.mode-tab[data-mode="extend"]');
@@ -184,23 +251,47 @@ const VideoGenerator = {
 
         // If currently on extend mode, switch back to default
         if (this.currentMode === 'extend') {
-            this.currentMode = modelId.includes('image-to-video') || modelId.includes('reference-to-video')
+            this.currentMode = modelId.includes('image-to-video') || modelId.includes('reference-to-video') || isMotionControl
                 ? 'image-to-video' : 'text-to-video';
             document.querySelectorAll('.mode-tab').forEach(t => t.classList.remove('active'));
             const defaultTab = document.querySelector(`.mode-tab[data-mode="${this.currentMode}"]`);
             if (defaultTab) defaultTab.classList.add('active');
         }
 
-        // Image-to-video and reference models need source image section
-        if (modelId.includes('image-to-video') || modelId.includes('reference-to-video')) {
+        // Motion control: show special sections, hide mode tabs
+        if (isMotionControl) {
+            motionOrientationSection.classList.remove('hidden');
+            motionVideoSection.classList.remove('hidden');
             sourceSection.classList.remove('hidden');
+            sourceSection.querySelector('.section-label').textContent = 'Character Image';
+            // Hide mode tabs for motion control
+            document.querySelectorAll('.mode-tab').forEach(t => t.style.display = 'none');
+            // Hide standard video settings (aspect, resolution, duration)
+            document.getElementById('vidAspect').closest('.setting-row').style.display = 'none';
+            document.getElementById('vidResolution').closest('.setting-row').style.display = 'none';
+            durationSelect.closest('.setting-row').style.display = 'none';
         } else {
-            sourceSection.classList.add('hidden');
+            motionOrientationSection.classList.add('hidden');
+            motionVideoSection.classList.add('hidden');
+            // Restore mode tabs
+            document.querySelectorAll('.mode-tab').forEach(t => t.style.display = '');
+            // Restore standard video settings
+            document.getElementById('vidAspect').closest('.setting-row').style.display = '';
+            document.getElementById('vidResolution').closest('.setting-row').style.display = '';
+            durationSelect.closest('.setting-row').style.display = '';
+
+            // Image-to-video and reference models need source image section
+            if (modelId.includes('image-to-video') || modelId.includes('reference-to-video')) {
+                sourceSection.classList.remove('hidden');
+                sourceSection.querySelector('.section-label').textContent = 'Source Image';
+            } else {
+                sourceSection.classList.add('hidden');
+            }
         }
 
-        // Sora 2 and Kling 2.6 don't support separate audio/dialogue
+        // Sora 2 and Kling 2.6 I2V don't support separate audio/dialogue
         const isKling26 = modelId === 'kling-2.6-pro-image-to-video';
-        if (isSora || isKling26) {
+        if (isSora || isKling26 || isMotionControl) {
             audioSection.classList.add('hidden');
         } else {
             audioSection.classList.remove('hidden');
@@ -226,7 +317,7 @@ const VideoGenerator = {
                 <option value="8" selected>8 segundos</option>
                 <option value="12">12 segundos</option>
             `;
-        } else {
+        } else if (!isMotionControl) {
             durationSelect.innerHTML = `
                 <option value="4">4 segundos</option>
                 <option value="6">6 segundos</option>
@@ -238,7 +329,27 @@ const VideoGenerator = {
     async setSourceImage(file) {
         const dataUrl = await API.fileToBase64(file);
         this.sourceImageData = dataUrl;
-        document.getElementById('vidSourceImg').src = dataUrl;
+        const imgEl = document.getElementById('vidSourceImg');
+        // For video files, swap to a video element display
+        if (file.type.startsWith('video/')) {
+            imgEl.style.display = 'none';
+            let vidEl = document.getElementById('vidSourceVidEl');
+            if (!vidEl) {
+                vidEl = document.createElement('video');
+                vidEl.id = 'vidSourceVidEl';
+                vidEl.style.cssText = 'width:100%;max-height:300px;border-radius:var(--radius);';
+                vidEl.muted = true;
+                vidEl.controls = true;
+                imgEl.parentElement.insertBefore(vidEl, imgEl);
+            }
+            vidEl.src = dataUrl;
+            vidEl.style.display = 'block';
+        } else {
+            imgEl.src = dataUrl;
+            imgEl.style.display = '';
+            const vidEl = document.getElementById('vidSourceVidEl');
+            if (vidEl) vidEl.style.display = 'none';
+        }
         document.getElementById('vidSourcePreview').style.display = 'block';
         document.getElementById('vidSourceDrop').style.display = 'none';
     },
@@ -250,11 +361,28 @@ const VideoGenerator = {
         document.getElementById('vidSourceDrop').style.display = 'none';
     },
 
+    async setMotionVideo(file) {
+        this.motionVideoFile = file;
+        const dataUrl = await API.fileToBase64(file);
+        this.motionVideoData = dataUrl;
+        document.getElementById('vidMotionVideo').src = dataUrl;
+        document.getElementById('vidMotionPreview').style.display = 'block';
+        document.getElementById('vidMotionDrop').style.display = 'none';
+    },
+
+    setMotionVideoFromUrl(url) {
+        this.motionVideoData = url;
+        this.motionVideoFile = null;
+        document.getElementById('vidMotionVideo').src = url;
+        document.getElementById('vidMotionPreview').style.display = 'block';
+        document.getElementById('vidMotionDrop').style.display = 'none';
+    },
+
     async generate() {
         const prompt = document.getElementById('vidPrompt').value.trim();
-        if (!prompt) return alert('Enter a video prompt');
-
         const modelId = Storage.getSelectedVideoModel();
+        const isMotionControl = modelId.includes('motion-control');
+        if (!prompt && !isMotionControl) return alert('Enter a video prompt');
         const aspect = document.getElementById('vidAspect').value;
         const resolution = document.getElementById('vidResolution').value;
         const duration = parseInt(document.getElementById('vidDuration').value);
@@ -306,6 +434,91 @@ const VideoGenerator = {
                         params.image = this.sourceImageData;
                     }
                 }
+            } else if (modelId === 'kling-2.6-pro-motion-control') {
+                // Motion Control: image (or video as character), video (motion reference)
+                const orientationBtn = document.querySelector('#vidCharOrientation .btn-toggle.active');
+                const charOrientation = orientationBtn ? orientationBtn.dataset.value : 'image';
+                const keepSound = document.getElementById('vidKeepOriginalSound').checked;
+
+                params = {
+                    character_orientation: charOrientation,
+                    keep_original_sound: keepSound,
+                };
+                if (prompt) params.prompt = prompt;
+                if (negPrompt) params.negative_prompt = negPrompt;
+
+                // Upload character image/video to CDN
+                if (this.sourceImageData) {
+                    if (this.sourceImageData.startsWith('data:')) {
+                        const blob = await (await fetch(this.sourceImageData)).blob();
+                        const ext = charOrientation === 'video' ? 'mp4' : 'png';
+                        const file = new File([blob], `source.${ext}`, { type: blob.type });
+                        params.image = await API.uploadFile(file);
+                    } else {
+                        params.image = this.sourceImageData;
+                    }
+                } else {
+                    throw new Error('Upload a character image (or video) first.');
+                }
+
+                // Upload motion reference video to CDN
+                if (this.motionVideoFile) {
+                    params.video = await API.uploadFile(this.motionVideoFile);
+                } else if (this.motionVideoData) {
+                    if (this.motionVideoData.startsWith('data:')) {
+                        const blob = await (await fetch(this.motionVideoData)).blob();
+                        const file = new File([blob], 'motion.mp4', { type: blob.type || 'video/mp4' });
+                        params.video = await API.uploadFile(file);
+                    } else {
+                        params.video = this.motionVideoData;
+                    }
+                } else {
+                    throw new Error('Upload a motion reference video first.');
+                }
+
+            } else if (modelId === 'kling-3.0-std-motion-control') {
+                // Kling 3.0 Std Motion Control: same as 2.6 + element_list
+                const orientationBtn = document.querySelector('#vidCharOrientation .btn-toggle.active');
+                const charOrientation = orientationBtn ? orientationBtn.dataset.value : 'image';
+                const keepSound = document.getElementById('vidKeepOriginalSound').checked;
+
+                params = {
+                    character_orientation: charOrientation,
+                    keep_original_sound: keepSound,
+                    element_list: [],
+                };
+                if (prompt) params.prompt = prompt;
+                if (negPrompt) params.negative_prompt = negPrompt;
+
+                // Upload character image/video to CDN
+                if (this.sourceImageData) {
+                    if (this.sourceImageData.startsWith('data:')) {
+                        const blob = await (await fetch(this.sourceImageData)).blob();
+                        const ext = charOrientation === 'video' ? 'mp4' : 'png';
+                        const file = new File([blob], `source.${ext}`, { type: blob.type });
+                        params.image = await API.uploadFile(file);
+                    } else {
+                        params.image = this.sourceImageData;
+                    }
+                } else {
+                    throw new Error('Upload a character image (or video) first.');
+                }
+
+                // Upload motion reference video to CDN
+                if (this.motionVideoFile) {
+                    params.video = await API.uploadFile(this.motionVideoFile);
+                } else if (this.motionVideoData) {
+                    if (this.motionVideoData.startsWith('data:')) {
+                        const blob = await (await fetch(this.motionVideoData)).blob();
+                        const file = new File([blob], 'motion.mp4', { type: blob.type || 'video/mp4' });
+                        params.video = await API.uploadFile(file);
+                    } else {
+                        params.video = this.motionVideoData;
+                    }
+                } else {
+                    throw new Error('Upload a motion reference video first.');
+                }
+
             } else if (modelId === 'kling-3.0-pro-image-to-video') {
                 // Kling 3.0 Pro: image, prompt, duration (3-15), cfg_scale, sound
                 params = {

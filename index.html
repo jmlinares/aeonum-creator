@@ -265,6 +265,35 @@
                     </div>
                 </div>
 
+                <!-- Motion Control: Character Orientation -->
+                <div class="panel-section hidden" id="vidMotionOrientationSection">
+                    <label class="section-label">Character Source</label>
+                    <div class="btn-group" id="vidCharOrientation">
+                        <button class="btn-toggle active" data-value="image">From Image</button>
+                        <button class="btn-toggle" data-value="video">From Video</button>
+                    </div>
+                </div>
+
+                <!-- Motion Control: Reference Video -->
+                <div class="panel-section hidden" id="vidMotionVideoSection">
+                    <label class="section-label">Motion Reference Video</label>
+                    <div class="source-image-drop" id="vidMotionDrop">
+                        <p>Drop motion video here or click to upload</p>
+                        <small style="color:var(--text-muted);">Dance, gesture, action clip (.mp4/.mov, max 10MB)</small>
+                        <input type="file" id="vidMotionFile" accept="video/mp4,video/quicktime,video/*" style="display:none">
+                    </div>
+                    <div class="source-image-preview" id="vidMotionPreview" style="display:none;">
+                        <video id="vidMotionVideo" style="width:100%;max-height:200px;border-radius:var(--radius);" muted controls></video>
+                        <button class="btn-remove" id="btnRemoveVidMotion">✕</button>
+                    </div>
+                    <div class="setting-row" style="margin-top:8px;">
+                        <span>Keep original sound</span>
+                        <label style="cursor:pointer;">
+                            <input type="checkbox" id="vidKeepOriginalSound" checked> Yes
+                        </label>
+                    </div>
+                </div>
+
                 <!-- Video Prompt -->
                 <div class="panel-section">
                     <label class="section-label">Video Prompt</label>
@@ -553,6 +582,20 @@
                         <div class="mo-info">
                             <strong>Kling 2.6 Pro - Image to Video</strong>
                             <small>Smooth motion, native audio, 5/10s — <span class="price-tag">$0.56 audio · $0.38 sin audio</span></small>
+                        </div>
+                    </div>
+                    <div class="model-option" data-model="kling-2.6-pro-motion-control" data-badge="MOT">
+                        <span class="mo-badge kling">MOT</span>
+                        <div class="mo-info">
+                            <strong>Kling 2.6 Pro - Motion Control</strong>
+                            <small>Transfer motion from reference video to character — <span class="price-tag">$0.56 audio · $0.38 sin audio</span></small>
+                        </div>
+                    </div>
+                    <div class="model-option" data-model="kling-3.0-std-motion-control" data-badge="M30">
+                        <span class="mo-badge kling-pro">M30</span>
+                        <div class="mo-info">
+                            <strong>Kling 3.0 Std - Motion Control</strong>
+                            <small>3-30s motion transfer, element refs — <span class="price-tag">$0.56 audio · $0.38 sin audio</span></small>
                         </div>
                     </div>
                 </div>
