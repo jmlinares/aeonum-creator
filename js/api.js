@@ -29,6 +29,7 @@ const API = {
         'kling-2.6-pro-image-to-video':  '/kwaivgi/kling-v2.6-pro/image-to-video',
         'kling-2.6-pro-motion-control':  '/kwaivgi/kling-v2.6-pro/motion-control',
         'kling-3.0-std-motion-control':  '/kwaivgi/kling-v3.0-std/motion-control',
+        'kling-3.0-pro-motion-control':  '/kwaivgi/kling-v3.0-pro/motion-control',
     },
 
     // ===== PRICING (USD per generation) =====
@@ -62,6 +63,7 @@ const API = {
         'kling-2.6-pro-image-to-video': { flat: 0.56, flatNoAudio: 0.38 },
         'kling-2.6-pro-motion-control': { flat: 0.56, flatNoAudio: 0.38 },
         'kling-3.0-std-motion-control': { flat: 0.56, flatNoAudio: 0.38 },
+        'kling-3.0-pro-motion-control': { flat: 0.84, flatNoAudio: 0.56 },
     },
 
     getImageCost(modelId, resolution) {

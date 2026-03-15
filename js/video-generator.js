@@ -41,6 +41,7 @@ const VideoGenerator = {
             'kling-2.6-pro-image-to-video': { badge: 'K26',  name: 'Kling 2.6 Pro - Image to Video' },
             'kling-2.6-pro-motion-control': { badge: 'MOT',  name: 'Kling 2.6 Pro - Motion Control' },
             'kling-3.0-std-motion-control': { badge: 'M30',  name: 'Kling 3.0 Std - Motion Control' },
+            'kling-3.0-pro-motion-control': { badge: 'MP3',  name: 'Kling 3.0 Pro - Motion Control' },
         };
 
         const m = models[modelId] || models['veo-3.1-text-to-video'];
@@ -476,8 +477,8 @@ const VideoGenerator = {
                     throw new Error('Upload a motion reference video first.');
                 }
 
-            } else if (modelId === 'kling-3.0-std-motion-control') {
-                // Kling 3.0 Std Motion Control: same as 2.6 + element_list
+            } else if (modelId === 'kling-3.0-std-motion-control' || modelId === 'kling-3.0-pro-motion-control') {
+                // Kling 3.0 Std/Pro Motion Control: same as 2.6 + element_list
                 const orientationBtn = document.querySelector('#vidCharOrientation .btn-toggle.active');
                 const charOrientation = orientationBtn ? orientationBtn.dataset.value : 'image';
                 const keepSound = document.getElementById('vidKeepOriginalSound').checked;
