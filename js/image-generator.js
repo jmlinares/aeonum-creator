@@ -7,6 +7,10 @@ const ImageGenerator = {
     isGenerating: false,
     activeRequestIds: [], // track polling request IDs for cancellation
     viewerZoom: 1,
+    renderedCount: 0, // how many cards are rendered (infinite scroll)
+    BATCH_SIZE: 40, // cards per batch
+    _lazyObserver: null, // IntersectionObserver for lazy-loading hi-res
+    _scrollObserver: null, // IntersectionObserver for infinite scroll sentinel
 
     async init() {
         // Try loading from Firebase first, fallback to localStorage
@@ -44,14 +48,20 @@ const ImageGenerator = {
                     img.thumbnailUrl = thumbUrl;
                     FirebaseSync.saveImageRecord(img);
                     Storage.updateImageInHistory(img);
-                    // Replace placeholder in DOM with actual thumbnail
+                    // Update DOM: replace placeholder or swap hi-res → thumbnail
                     const placeholder = document.querySelector(`.card-placeholder[data-id="${img.id}"]`);
                     if (placeholder) {
+                        // Still a placeholder — unobserve and replace with thumbnail
+                        if (this._lazyObserver) this._lazyObserver.unobserve(placeholder);
                         const imgEl = document.createElement('img');
                         imgEl.src = thumbUrl;
                         imgEl.alt = 'Generated';
                         imgEl.loading = 'lazy';
                         placeholder.replaceWith(imgEl);
+                    } else {
+                        // Already loaded hi-res via IntersectionObserver — swap to thumbnail
+                        const hiResImg = document.querySelector(`.image-card:not(.generating) img[src="${CSS.escape(img.url)}"]`);
+                        if (hiResImg) hiResImg.src = thumbUrl;
                     }
                 }
             }).catch(() => {}).finally(() => {
@@ -1003,6 +1013,119 @@ const ImageGenerator = {
         if (card) card.remove();
     },
 
+    // --- Lazy-load observer: loads hi-res only when card is visible ---
+    _initLazyObserver() {
+        if (this._lazyObserver) { this._lazyObserver.disconnect(); }
+        this._lazyObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (!entry.isIntersecting) return;
+                const placeholder = entry.target;
+                const url = placeholder.dataset.url;
+                if (!url) return;
+                this._lazyObserver.unobserve(placeholder);
+                const imgEl = document.createElement('img');
+                imgEl.alt = 'Generated';
+                imgEl.src = url;
+                placeholder.replaceWith(imgEl);
+            });
+        }, { rootMargin: '200px' });
+    },
+
+    // --- Infinite scroll sentinel observer ---
+    _initScrollObserver() {
+        if (this._scrollObserver) this._scrollObserver.disconnect();
+        this._scrollObserver = new IntersectionObserver((entries) => {
+            if (entries[0].isIntersecting) this._renderNextBatch();
+        }, { rootMargin: '400px' });
+    },
+
+    _buildCard(img, idx) {
+        const card = document.createElement('div');
+        card.className = 'image-card';
+        const costLabel = img.cost ? `$${img.cost.toFixed(3)}` : '';
+        const dimsLabel = img.width && img.height ? `${img.width}×${img.height}` : '';
+        const isFav = img.starred ? 'starred' : '';
+        const cleanBtn = img.metaCleaned
+            ? `<button class="btn-card cleaned" title="Metadata Cleaned" data-action="clean-meta" data-idx="${idx}" disabled>✅</button>`
+            : `<button class="btn-card" title="Clean Metadata" data-action="clean-meta" data-idx="${idx}">🧹</button>`;
+        const hasThumbnail = !!img.thumbnailUrl;
+
+        // Thumbnail → load immediately; no thumbnail → lazy placeholder (loads hi-res when visible)
+        let imageHtml;
+        if (hasThumbnail) {
+            imageHtml = `<img src="${img.thumbnailUrl}" alt="Generated" loading="lazy">`;
+        } else {
+            imageHtml = `<div class="card-placeholder" data-id="${img.id}" data-url="${img.url}"><span>⏳</span></div>`;
+        }
+
+        card.innerHTML = `
+            ${imageHtml}
+            ${costLabel ? `<span class="card-cost">${costLabel}</span>` : ''}
+            ${dimsLabel ? `<span class="card-dims">${dimsLabel}</span>` : ''}
+            <div class="card-actions-right">
+                <button class="btn-card ${isFav}" title="Favorite" data-action="star" data-idx="${idx}">☆</button>
+                ${cleanBtn}
+                <button class="btn-card" title="Download" data-action="download" data-idx="${idx}">⬇</button>
+                <button class="btn-card" title="Delete" data-action="delete" data-idx="${idx}">🗑</button>
+            </div>
+            <div class="card-actions-left">
+                <button class="btn-card" title="Add to Collection" data-action="add-to-col" data-idx="${idx}">📁</button>
+                <button class="btn-card" title="Use as Reference" data-action="add-ref" data-idx="${idx}">＋</button>
+                <button class="btn-card" title="Send to Video" data-action="to-video" data-idx="${idx}">▶</button>
+                <button class="btn-card" title="Edit / Remix" data-action="remix" data-idx="${idx}">🎬</button>
+            </div>
+        `;
+
+        // Observe placeholder for lazy hi-res loading
+        if (!hasThumbnail) {
+            const placeholder = card.querySelector('.card-placeholder');
+            if (placeholder) this._lazyObserver.observe(placeholder);
+        }
+
+        card.addEventListener('click', (e) => {
+            const actionBtn = e.target.closest('[data-action]');
+            if (actionBtn) {
+                const action = actionBtn.dataset.action;
+                if (action === 'download') this.downloadImage(idx);
+                else if (action === 'delete') this.deleteImage(idx);
+                else if (action === 'star') this.toggleStar(idx);
+                else if (action === 'to-video') this.sendToVideo(idx);
+                else if (action === 'remix') this.remixImage(idx);
+                else if (action === 'add-ref') this.addRefFromUrl(this.generatedImages[idx].url);
+                else if (action === 'add-to-col') Collections.showAddToCollectionModal(this.generatedImages[idx].id);
+                else if (action === 'clean-meta') this.cleanMetadata(idx, actionBtn);
+                return;
+            }
+            this.openViewer(idx);
+        });
+        return card;
+    },
+
+    _renderNextBatch() {
+        const grid = document.getElementById('imageGrid');
+        const total = this.generatedImages.length;
+        const end = Math.min(this.renderedCount + this.BATCH_SIZE, total);
+        if (this.renderedCount >= total) return;
+
+        // Remove old sentinel before appending new cards
+        const oldSentinel = document.getElementById('gridSentinel');
+        if (oldSentinel) oldSentinel.remove();
+
+        for (let i = this.renderedCount; i < end; i++) {
+            grid.appendChild(this._buildCard(this.generatedImages[i], i));
+        }
+        this.renderedCount = end;
+
+        // Add sentinel for next batch if there are more
+        if (this.renderedCount < total) {
+            const sentinel = document.createElement('div');
+            sentinel.id = 'gridSentinel';
+            sentinel.style.height = '1px';
+            grid.appendChild(sentinel);
+            this._scrollObserver.observe(sentinel);
+        }
+    },
+
     renderGrid() {
         const grid = document.getElementById('imageGrid');
         const emptyState = document.getElementById('imgEmptyState');
@@ -1017,76 +1140,11 @@ const ImageGenerator = {
         }
 
         emptyState.style.display = 'none';
+        this.renderedCount = 0;
 
-        this.generatedImages.forEach((img, idx) => {
-            const card = document.createElement('div');
-            card.className = 'image-card';
-            const costLabel = img.cost ? `$${img.cost.toFixed(3)}` : '';
-            const dimsLabel = img.width && img.height ? `${img.width}×${img.height}` : '';
-            const isFav = img.starred ? 'starred' : '';
-            const cleanBtn = img.metaCleaned
-                ? `<button class="btn-card cleaned" title="Metadata Cleaned" data-action="clean-meta" data-idx="${idx}" disabled>✅</button>`
-                : `<button class="btn-card" title="Clean Metadata" data-action="clean-meta" data-idx="${idx}">🧹</button>`;
-            const hasThumbnail = !!img.thumbnailUrl;
-            const cardSrc = img.thumbnailUrl || '';
-            card.innerHTML = `
-                ${hasThumbnail
-                    ? `<img src="${cardSrc}" alt="Generated" loading="lazy">`
-                    : `<div class="card-placeholder" data-id="${img.id}"><span>⏳</span></div>`
-                }
-                ${costLabel ? `<span class="card-cost">${costLabel}</span>` : ''}
-                ${dimsLabel ? `<span class="card-dims">${dimsLabel}</span>` : ''}
-                <div class="card-actions-right">
-                    <button class="btn-card ${isFav}" title="Favorite" data-action="star" data-idx="${idx}">☆</button>
-                    ${cleanBtn}
-                    <button class="btn-card" title="Download" data-action="download" data-idx="${idx}">⬇</button>
-                    <button class="btn-card" title="Delete" data-action="delete" data-idx="${idx}">🗑</button>
-                </div>
-                <div class="card-actions-left">
-                    <button class="btn-card" title="Add to Collection" data-action="add-to-col" data-idx="${idx}">📁</button>
-                    <button class="btn-card" title="Use as Reference" data-action="add-ref" data-idx="${idx}">＋</button>
-                    <button class="btn-card" title="Send to Video" data-action="to-video" data-idx="${idx}">▶</button>
-                    <button class="btn-card" title="Edit / Remix" data-action="remix" data-idx="${idx}">🎬</button>
-                </div>
-            `;
-            // Lazy-detect dimensions for old images without them
-            // Skip if showing thumbnail or placeholder (would report wrong dims)
-            if (!img.width || !img.height) {
-                const cardImg = card.querySelector('img');
-                if (cardImg && !hasThumbnail) {
-                    cardImg.addEventListener('load', () => {
-                        if (cardImg.naturalWidth && cardImg.naturalHeight) {
-                            img.width = cardImg.naturalWidth;
-                            img.height = cardImg.naturalHeight;
-                            const dimsEl = card.querySelector('.card-dims');
-                            if (!dimsEl) {
-                                const span = document.createElement('span');
-                                span.className = 'card-dims';
-                                span.textContent = `${img.width}×${img.height}`;
-                                card.appendChild(span);
-                            }
-                        }
-                    });
-                }
-            }
-            card.addEventListener('click', (e) => {
-                const actionBtn = e.target.closest('[data-action]');
-                if (actionBtn) {
-                    const action = actionBtn.dataset.action;
-                    if (action === 'download') this.downloadImage(idx);
-                    else if (action === 'delete') this.deleteImage(idx);
-                    else if (action === 'star') this.toggleStar(idx);
-                    else if (action === 'to-video') this.sendToVideo(idx);
-                    else if (action === 'remix') this.remixImage(idx);
-                    else if (action === 'add-ref') this.addRefFromUrl(this.generatedImages[idx].url);
-                    else if (action === 'add-to-col') Collections.showAddToCollectionModal(this.generatedImages[idx].id);
-                    else if (action === 'clean-meta') this.cleanMetadata(idx, actionBtn);
-                    return;
-                }
-                this.openViewer(idx);
-            });
-            grid.appendChild(card);
-        });
+        this._initLazyObserver();
+        this._initScrollObserver();
+        this._renderNextBatch();
     },
 
     openViewer(idx) {
