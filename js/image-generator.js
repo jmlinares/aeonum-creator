@@ -30,17 +30,18 @@ const ImageGenerator = {
     // Generate thumbnails for existing images that don't have one yet
     backfillThumbnails() {
         const missing = this.generatedImages.filter(img => img.url && !img.thumbnailUrl);
-        if (missing.length === 0) return;
+        if (missing.length === 0) {
+            console.log('[Thumbnails] All images have thumbnails');
+            return;
+        }
         console.log(`[Thumbnails] Backfilling ${missing.length} images...`);
-
-        // Delay start so initial render isn't competing for bandwidth
-        setTimeout(() => this._runBackfill(missing), 3000);
+        this._runBackfill(missing);
     },
 
     _runBackfill(missing) {
         let idx = 0;
         let done = 0;
-        const CONCURRENCY = 2;
+        const CONCURRENCY = 5;
 
         const processOne = (img) => {
             return FirebaseSync.uploadThumbnail(img.url, `${img.id}.png`).then(thumbUrl => {
@@ -1013,7 +1014,8 @@ const ImageGenerator = {
         if (card) card.remove();
     },
 
-    // --- Lazy-load observer: loads hi-res only when card is visible ---
+    // --- Lazy-load observer: loads hi-res only when card scrolls into view ---
+    // Keeps placeholder visible until image is fully downloaded
     _initLazyObserver() {
         if (this._lazyObserver) { this._lazyObserver.disconnect(); }
         this._lazyObserver = new IntersectionObserver((entries) => {
@@ -1021,14 +1023,16 @@ const ImageGenerator = {
                 if (!entry.isIntersecting) return;
                 const placeholder = entry.target;
                 const url = placeholder.dataset.url;
-                if (!url) return;
+                if (!url || placeholder.dataset.loading) return;
+                placeholder.dataset.loading = '1';
                 this._lazyObserver.unobserve(placeholder);
                 const imgEl = document.createElement('img');
                 imgEl.alt = 'Generated';
+                imgEl.onload = () => placeholder.replaceWith(imgEl);
+                imgEl.onerror = () => { placeholder.querySelector('span').textContent = '✕'; };
                 imgEl.src = url;
-                placeholder.replaceWith(imgEl);
             });
-        }, { rootMargin: '200px' });
+        }, { rootMargin: '300px' });
     },
 
     // --- Infinite scroll sentinel observer ---
