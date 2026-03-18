@@ -29,10 +29,14 @@ const ImageGenerator = {
         if (missing.length === 0) return;
         console.log(`[Thumbnails] Backfilling ${missing.length} images...`);
 
-        // Process 3 at a time in parallel for speed
+        // Delay start so initial render isn't competing for bandwidth
+        setTimeout(() => this._runBackfill(missing), 3000);
+    },
+
+    _runBackfill(missing) {
         let idx = 0;
         let done = 0;
-        const CONCURRENCY = 3;
+        const CONCURRENCY = 2;
 
         const processOne = (img) => {
             return FirebaseSync.uploadThumbnail(img.url, `${img.id}.png`).then(thumbUrl => {
@@ -40,20 +44,25 @@ const ImageGenerator = {
                     img.thumbnailUrl = thumbUrl;
                     FirebaseSync.saveImageRecord(img);
                     Storage.updateImageInHistory(img);
-                    const cardEl = document.querySelector(`.image-card:not(.generating) img[src="${img.url}"]`);
-                    if (cardEl) cardEl.src = thumbUrl;
+                    // Replace placeholder in DOM with actual thumbnail
+                    const placeholder = document.querySelector(`.card-placeholder[data-id="${img.id}"]`);
+                    if (placeholder) {
+                        const imgEl = document.createElement('img');
+                        imgEl.src = thumbUrl;
+                        imgEl.alt = 'Generated';
+                        imgEl.loading = 'lazy';
+                        placeholder.replaceWith(imgEl);
+                    }
                 }
             }).catch(() => {}).finally(() => {
                 done++;
                 if (done % 10 === 0 || done === missing.length) {
                     console.log(`[Thumbnails] ${done}/${missing.length}`);
                 }
-                // Pick up next item
                 if (idx < missing.length) processOne(missing[idx++]);
             });
         };
 
-        // Launch initial batch
         for (let i = 0; i < Math.min(CONCURRENCY, missing.length); i++) {
             processOne(missing[idx++]);
         }
@@ -1018,9 +1027,13 @@ const ImageGenerator = {
             const cleanBtn = img.metaCleaned
                 ? `<button class="btn-card cleaned" title="Metadata Cleaned" data-action="clean-meta" data-idx="${idx}" disabled>✅</button>`
                 : `<button class="btn-card" title="Clean Metadata" data-action="clean-meta" data-idx="${idx}">🧹</button>`;
-            const cardSrc = img.thumbnailUrl || img.url;
+            const hasThumbnail = !!img.thumbnailUrl;
+            const cardSrc = img.thumbnailUrl || '';
             card.innerHTML = `
-                <img src="${cardSrc}" alt="Generated" loading="lazy">
+                ${hasThumbnail
+                    ? `<img src="${cardSrc}" alt="Generated" loading="lazy">`
+                    : `<div class="card-placeholder" data-id="${img.id}"><span>⏳</span></div>`
+                }
                 ${costLabel ? `<span class="card-cost">${costLabel}</span>` : ''}
                 ${dimsLabel ? `<span class="card-dims">${dimsLabel}</span>` : ''}
                 <div class="card-actions-right">
@@ -1037,11 +1050,10 @@ const ImageGenerator = {
                 </div>
             `;
             // Lazy-detect dimensions for old images without them
-            // Skip if showing thumbnail (would report thumbnail dims, not real ones)
+            // Skip if showing thumbnail or placeholder (would report wrong dims)
             if (!img.width || !img.height) {
-                const usingThumbnail = img.thumbnailUrl && img.thumbnailUrl !== img.url;
-                if (!usingThumbnail) {
-                    const cardImg = card.querySelector('img');
+                const cardImg = card.querySelector('img');
+                if (cardImg && !hasThumbnail) {
                     cardImg.addEventListener('load', () => {
                         if (cardImg.naturalWidth && cardImg.naturalHeight) {
                             img.width = cardImg.naturalWidth;
