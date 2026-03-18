@@ -1,7 +1,8 @@
 /* ========== METADATA CLEANER (100% Client-Side) ========== */
+/* Supports images (EXIF strip via canvas) and videos (MP4 udta atom removal) */
 
 const MetadataCleaner = {
-    images: [], // { file, dataUrl, name, size, selected, cleaned }
+    files: [], // { file, previewUrl, name, size, type:'image'|'video', selected, cleaned, cleanedBlob }
 
     init() {
         this.bindEvents();
@@ -29,12 +30,12 @@ const MetadataCleaner = {
         dropzone.addEventListener('drop', (e) => {
             e.preventDefault();
             dropzone.classList.remove('drag-over');
-            this.addImages(e.dataTransfer.files);
+            this.addFiles(e.dataTransfer.files);
         });
 
         // File input
         fileInput.addEventListener('change', (e) => {
-            this.addImages(e.target.files);
+            this.addFiles(e.target.files);
             fileInput.value = '';
         });
 
@@ -43,19 +44,24 @@ const MetadataCleaner = {
 
         // Select all
         document.getElementById('btnMetaSelectAll').addEventListener('click', () => {
-            this.images.forEach(img => img.selected = true);
+            this.files.forEach(f => f.selected = true);
             this.render();
         });
 
         // Deselect all
         document.getElementById('btnMetaDeselectAll').addEventListener('click', () => {
-            this.images.forEach(img => img.selected = false);
+            this.files.forEach(f => f.selected = false);
             this.render();
         });
 
         // Reset
         document.getElementById('btnMetaReset').addEventListener('click', () => {
-            this.images = [];
+            // Revoke object URLs to free memory
+            this.files.forEach(f => {
+                if (f.previewUrl && f.previewUrl.startsWith('blob:')) URL.revokeObjectURL(f.previewUrl);
+                if (f.cleanedBlob) URL.revokeObjectURL(f._cleanedObjUrl);
+            });
+            this.files = [];
             this.render();
             document.getElementById('metaDropzone').style.display = 'block';
             document.getElementById('metaToolbar').classList.add('hidden');
@@ -68,17 +74,29 @@ const MetadataCleaner = {
         document.getElementById('btnMetaClean').addEventListener('click', () => this.cleanSelected());
     },
 
-    async addImages(files) {
-        for (const file of files) {
-            if (!file.type.startsWith('image/')) continue;
-            const dataUrl = await API.fileToBase64(file);
-            this.images.push({
+    async addFiles(fileList) {
+        for (const file of fileList) {
+            const isImage = file.type.startsWith('image/');
+            const isVideo = file.type.startsWith('video/');
+            if (!isImage && !isVideo) continue;
+
+            let previewUrl;
+            if (isImage) {
+                previewUrl = await this._fileToDataUrl(file);
+            } else {
+                previewUrl = URL.createObjectURL(file);
+            }
+
+            this.files.push({
                 file,
-                dataUrl,
+                previewUrl,
                 name: file.name,
                 size: (file.size / (1024 * 1024)).toFixed(2) + ' MB',
+                type: isImage ? 'image' : 'video',
                 selected: true,
-                cleaned: false
+                cleaned: false,
+                cleanedBlob: null,
+                _cleanedObjUrl: null
             });
         }
 
@@ -89,32 +107,50 @@ const MetadataCleaner = {
         this.render();
     },
 
+    _fileToDataUrl(file) {
+        return new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result);
+            reader.readAsDataURL(file);
+        });
+    },
+
     render() {
         const grid = document.getElementById('metaImagesGrid');
         grid.innerHTML = '';
 
-        const selectedCount = this.images.filter(i => i.selected).length;
-        document.getElementById('metaSelectedCount').textContent = `${selectedCount} of ${this.images.length} selected`;
-        document.getElementById('metaCleanCount').textContent = `${selectedCount} image${selectedCount !== 1 ? 's' : ''} selected to clean`;
+        const selectedCount = this.files.filter(f => f.selected).length;
+        document.getElementById('metaSelectedCount').textContent = `${selectedCount} of ${this.files.length} selected`;
+        document.getElementById('metaCleanCount').textContent = `${selectedCount} file${selectedCount !== 1 ? 's' : ''} selected to clean`;
 
-        this.images.forEach((img, idx) => {
+        this.files.forEach((item, idx) => {
             const card = document.createElement('div');
-            card.className = `meta-image-card${img.selected ? ' selected' : ''}`;
+            card.className = `meta-image-card${item.selected ? ' selected' : ''}`;
+
+            let previewHtml;
+            if (item.type === 'video') {
+                previewHtml = `<video src="${item.previewUrl}" muted preload="metadata" class="meta-video-preview"></video>
+                               <div class="meta-type-badge">VIDEO</div>`;
+            } else {
+                previewHtml = `<img src="${item.previewUrl}" alt="${item.name}">`;
+            }
+
             card.innerHTML = `
-                <div class="meta-check">${img.selected ? '✓' : ''}</div>
+                <div class="meta-check">${item.selected ? '✓' : ''}</div>
                 <button class="meta-card-remove" data-idx="${idx}">✕</button>
-                <img src="${img.dataUrl}" alt="${img.name}">
-                ${img.cleaned ? '<div class="meta-status clean">Clean</div>' : ''}
+                ${previewHtml}
+                ${item.cleaned ? '<div class="meta-status clean">Clean</div>' : ''}
                 <div class="meta-card-info">
-                    <div class="meta-filename" title="${img.name}">${img.name}</div>
-                    <div class="meta-filesize">${img.size}</div>
+                    <div class="meta-filename" title="${item.name}">${item.name}</div>
+                    <div class="meta-filesize">${item.size}</div>
                 </div>
             `;
 
             card.addEventListener('click', (e) => {
                 if (e.target.closest('.meta-card-remove')) {
-                    this.images.splice(idx, 1);
-                    if (this.images.length === 0) {
+                    if (item.previewUrl && item.previewUrl.startsWith('blob:')) URL.revokeObjectURL(item.previewUrl);
+                    this.files.splice(idx, 1);
+                    if (this.files.length === 0) {
                         document.getElementById('metaDropzone').style.display = 'block';
                         document.getElementById('metaToolbar').classList.add('hidden');
                         document.getElementById('metaImagesGrid').classList.add('hidden');
@@ -123,7 +159,7 @@ const MetadataCleaner = {
                     this.render();
                     return;
                 }
-                img.selected = !img.selected;
+                item.selected = !item.selected;
                 this.render();
             });
 
@@ -132,7 +168,7 @@ const MetadataCleaner = {
     },
 
     async cleanSelected() {
-        const selected = this.images.filter(i => i.selected && !i.cleaned);
+        const selected = this.files.filter(f => f.selected && !f.cleaned);
         if (selected.length === 0) return;
 
         const progressEl = document.getElementById('metaProgress');
@@ -145,16 +181,26 @@ const MetadataCleaner = {
         cleanBtn.textContent = 'Cleaning...';
 
         for (let i = 0; i < selected.length; i++) {
-            const img = selected[i];
+            const item = selected[i];
             countEl.textContent = `${i + 1}/${selected.length}`;
             fillEl.style.width = `${((i + 1) / selected.length) * 100}%`;
 
             try {
-                const cleanedDataUrl = await this.stripMetadata(img.dataUrl);
-                img.dataUrl = cleanedDataUrl;
-                img.cleaned = true;
+                if (item.type === 'image') {
+                    const cleanedDataUrl = await this._stripImageMetadata(item.previewUrl);
+                    item.previewUrl = cleanedDataUrl;
+                    item.cleaned = true;
+                } else {
+                    const cleanedBlob = await this._stripVideoMetadata(item.file);
+                    item.cleanedBlob = cleanedBlob;
+                    // Update preview to cleaned version
+                    if (item.previewUrl.startsWith('blob:')) URL.revokeObjectURL(item.previewUrl);
+                    item.previewUrl = URL.createObjectURL(cleanedBlob);
+                    item._cleanedObjUrl = item.previewUrl;
+                    item.cleaned = true;
+                }
             } catch (err) {
-                console.error('Failed to clean:', img.name, err);
+                console.error('Failed to clean:', item.name, err);
             }
 
             this.render();
@@ -162,13 +208,11 @@ const MetadataCleaner = {
 
         cleanBtn.disabled = false;
         cleanBtn.textContent = 'Clean Metadata';
-
-        // Show download all button
         this.showDownloadAll();
     },
 
     showDownloadAll() {
-        const cleaned = this.images.filter(i => i.cleaned);
+        const cleaned = this.files.filter(f => f.cleaned);
         if (cleaned.length === 0) return;
 
         let dlBtn = document.getElementById('btnMetaDownloadAll');
@@ -184,24 +228,36 @@ const MetadataCleaner = {
     },
 
     async downloadAll() {
-        const cleaned = this.images.filter(i => i.cleaned);
+        const cleaned = this.files.filter(f => f.cleaned);
         if (cleaned.length === 0) return;
 
-        if (cleaned.length === 1) {
-            this.downloadCleanedImage(cleaned[0].dataUrl, cleaned[0].name);
-            return;
-        }
-
-        // Download each with small delay to avoid browser blocking
         for (let i = 0; i < cleaned.length; i++) {
-            this.downloadCleanedImage(cleaned[i].dataUrl, cleaned[i].name);
+            this._downloadItem(cleaned[i]);
             if (i < cleaned.length - 1) {
                 await new Promise(r => setTimeout(r, 300));
             }
         }
     },
 
-    stripMetadata(dataUrl) {
+    _downloadItem(item) {
+        const baseName = item.name.replace(/\.[^.]+$/, '');
+        const a = document.createElement('a');
+
+        if (item.type === 'video' && item.cleanedBlob) {
+            a.href = URL.createObjectURL(item.cleanedBlob);
+            a.download = `${baseName}_clean.mp4`;
+        } else {
+            a.href = item.previewUrl;
+            a.download = `${baseName}_clean.png`;
+        }
+
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+    },
+
+    // ===== IMAGE: strip EXIF via canvas re-export =====
+    _stripImageMetadata(dataUrl) {
         return new Promise((resolve, reject) => {
             const img = new Image();
             img.onload = () => {
@@ -210,7 +266,6 @@ const MetadataCleaner = {
                 canvas.height = img.naturalHeight;
                 const ctx = canvas.getContext('2d');
                 ctx.drawImage(img, 0, 0);
-                // Re-export as PNG (no EXIF)
                 resolve(canvas.toDataURL('image/png'));
             };
             img.onerror = reject;
@@ -218,13 +273,95 @@ const MetadataCleaner = {
         });
     },
 
-    downloadCleanedImage(dataUrl, originalName) {
-        const ext = originalName.replace(/\.[^.]+$/, '');
-        const a = document.createElement('a');
-        a.href = dataUrl;
-        a.download = `${ext}_clean.png`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
+    // ===== VIDEO: strip metadata by removing udta/meta atoms from MP4 =====
+    async _stripVideoMetadata(file) {
+        const buffer = await file.arrayBuffer();
+        const bytes = new Uint8Array(buffer);
+
+        // Parse MP4 box structure and rebuild without metadata atoms
+        const cleanedParts = [];
+        this._walkBoxes(bytes, 0, bytes.length, cleanedParts, /* depth */ 0);
+
+        return new Blob(cleanedParts, { type: 'video/mp4' });
+    },
+
+    // Metadata atom types to remove
+    _isMetadataBox(type) {
+        const strip = ['udta', 'meta', '\xa9nam', '\xa9ART', '\xa9alb', '\xa9cmt',
+                        '\xa9day', '\xa9too', '\xa9gen', 'cprt', 'desc', 'loci',
+                        'XMP_', 'uuid'];
+        return strip.includes(type);
+    },
+
+    // Container boxes that may contain metadata children — recurse into them
+    _isContainerBox(type) {
+        return ['moov', 'trak', 'mdia', 'minf', 'stbl', 'edts', 'dinf'].includes(type);
+    },
+
+    _readBoxHeader(bytes, offset) {
+        if (offset + 8 > bytes.length) return null;
+        const view = new DataView(bytes.buffer, bytes.byteOffset);
+        let size = view.getUint32(offset);
+        const type = String.fromCharCode(bytes[offset+4], bytes[offset+5], bytes[offset+6], bytes[offset+7]);
+        let headerSize = 8;
+
+        if (size === 1) {
+            // 64-bit extended size
+            if (offset + 16 > bytes.length) return null;
+            const hi = view.getUint32(offset + 8);
+            const lo = view.getUint32(offset + 12);
+            size = hi * 0x100000000 + lo;
+            headerSize = 16;
+        } else if (size === 0) {
+            // Box extends to end of file
+            size = bytes.length - offset;
+        }
+
+        return { size, type, headerSize, offset };
+    },
+
+    _walkBoxes(bytes, start, end, output, depth) {
+        let pos = start;
+        while (pos < end) {
+            const box = this._readBoxHeader(bytes, pos);
+            if (!box || box.size < 8 || pos + box.size > end) {
+                // Remaining bytes — copy as-is
+                if (pos < end) output.push(bytes.slice(pos, end));
+                break;
+            }
+
+            if (this._isMetadataBox(box.type)) {
+                // Skip this entire box (strip it)
+                console.log(`[MetaCleaner] Stripping ${box.type} box (${box.size} bytes)`);
+            } else if (this._isContainerBox(box.type)) {
+                // Recurse: rebuild container without metadata children
+                const childParts = [];
+                this._walkBoxes(bytes, pos + box.headerSize, pos + box.size, childParts, depth + 1);
+                const childBlob = new Blob(childParts);
+
+                // Rewrite container header with new size
+                const newSize = box.headerSize + childBlob.size;
+                const header = new Uint8Array(box.headerSize);
+                const hView = new DataView(header.buffer);
+                if (box.headerSize === 16) {
+                    hView.setUint32(0, 1); // marker for 64-bit
+                    header[4] = bytes[pos+4]; header[5] = bytes[pos+5];
+                    header[6] = bytes[pos+6]; header[7] = bytes[pos+7];
+                    hView.setUint32(8, Math.floor(newSize / 0x100000000));
+                    hView.setUint32(12, newSize & 0xFFFFFFFF);
+                } else {
+                    hView.setUint32(0, newSize);
+                    header[4] = bytes[pos+4]; header[5] = bytes[pos+5];
+                    header[6] = bytes[pos+6]; header[7] = bytes[pos+7];
+                }
+                output.push(header);
+                output.push(...childParts);
+            } else {
+                // Non-metadata, non-container: copy as-is
+                output.push(bytes.slice(pos, pos + box.size));
+            }
+
+            pos += box.size;
+        }
     }
 };

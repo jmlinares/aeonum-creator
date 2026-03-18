@@ -421,7 +421,7 @@
     <div class="tab-content" id="metadata-cleaner">
         <div class="metadata-layout">
             <h1 class="meta-title">Metadata Cleaner</h1>
-            <p class="meta-subtitle">Select one or more images to view and remove metadata (EXIF, GPS, etc.)</p>
+            <p class="meta-subtitle">Select images or videos to view and remove metadata (EXIF, GPS, etc.)</p>
 
             <!-- Counter & actions -->
             <div class="meta-toolbar hidden" id="metaToolbar">
@@ -442,13 +442,13 @@
             <div class="meta-dropzone" id="metaDropzone">
                 <div class="dropzone-content">
                     <div class="upload-icon">⬆</div>
-                    <h2>Drag images here</h2>
+                    <h2>Drag images or videos here</h2>
                     <p>You can select multiple at once</p>
                     <div class="meta-drop-buttons">
-                        <button class="btn-upload" id="btnMetaUpload">Upload Images</button>
+                        <button class="btn-upload" id="btnMetaUpload">Upload Files</button>
                         <button class="btn-history" id="btnMetaHistory">History</button>
                     </div>
-                    <input type="file" id="metaFileInput" multiple accept="image/*" style="display:none">
+                    <input type="file" id="metaFileInput" multiple accept="image/*,video/*" style="display:none">
                 </div>
             </div>
 
@@ -457,7 +457,7 @@
 
             <!-- Bottom actions -->
             <div class="meta-bottom-actions hidden" id="metaBottomActions">
-                <span id="metaCleanCount">0 image selected to clean</span>
+                <span id="metaCleanCount">0 files selected to clean</span>
                 <button class="btn-sm" id="btnMetaReset">↺ Reset</button>
                 <button class="btn-generate" id="btnMetaClean">Clean Metadata</button>
             </div>
