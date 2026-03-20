@@ -335,9 +335,23 @@ const MetadataCleaner = {
 
     // Metadata atom types to remove
     _isMetadataBox(type) {
-        const strip = ['udta', 'meta', '\xa9nam', '\xa9ART', '\xa9alb', '\xa9cmt',
-                        '\xa9day', '\xa9too', '\xa9gen', 'cprt', 'desc', 'loci',
-                        'XMP_', 'uuid'];
+        const strip = [
+            // Standard metadata containers
+            'udta', 'meta',
+            // iTunes-style tags
+            '\xa9nam', '\xa9ART', '\xa9alb', '\xa9cmt', '\xa9day', '\xa9too',
+            '\xa9gen', '\xa9enc', '\xa9wrt', '\xa9grp', '\xa9lyr', '\xa9des',
+            // Copyright / description / location
+            'cprt', 'desc', 'loci', 'titl', 'auth', 'perf', 'gnre', 'dscp',
+            // XMP / UUID extensions
+            'XMP_', 'uuid',
+            // FFmpeg / libav specifics
+            'ISFT', 'IART', 'ICMT', 'INAM', 'ISRC', 'ICRD',
+            // Padding / free space (can contain residual data)
+            'free', 'skip', 'wide',
+            // GPS / location
+            '\xa9xyz',
+        ];
         return strip.includes(type);
     },
 
