@@ -333,7 +333,7 @@ const MetadataCleaner = {
         return new Blob(cleanedParts, { type: 'video/mp4' });
     },
 
-    // Metadata atom types to remove
+    // Metadata atom types to neutralize (replaced with 'free' boxes to preserve offsets)
     _isMetadataBox(type) {
         const strip = [
             // Standard metadata containers
@@ -347,17 +347,33 @@ const MetadataCleaner = {
             'XMP_', 'uuid',
             // FFmpeg / libav specifics
             'ISFT', 'IART', 'ICMT', 'INAM', 'ISRC', 'ICRD',
-            // Padding / free space (can contain residual data)
-            'free', 'skip', 'wide',
             // GPS / location
             '\xa9xyz',
         ];
         return strip.includes(type);
     },
 
+    // Padding boxes — zero out their content but keep their size
+    _isPaddingBox(type) {
+        return ['free', 'skip', 'wide'].includes(type);
+    },
+
     // Container boxes that may contain metadata children — recurse into them
     _isContainerBox(type) {
         return ['moov', 'trak', 'mdia', 'minf', 'stbl', 'edts', 'dinf'].includes(type);
+    },
+
+    // Create a 'free' box of exact size (zeroed payload, preserves byte offsets)
+    _makeFreeBox(size) {
+        const box = new Uint8Array(size);
+        const view = new DataView(box.buffer);
+        view.setUint32(0, size);
+        box[4] = 0x66; // 'f'
+        box[5] = 0x72; // 'r'
+        box[6] = 0x65; // 'e'
+        box[7] = 0x65; // 'e'
+        // Rest is already zeroed
+        return box;
     },
 
     _readBoxHeader(bytes, offset) {
@@ -392,30 +408,16 @@ const MetadataCleaner = {
                 break;
             }
 
-            if (this._isMetadataBox(box.type)) {
-                // Skip this entire box (strip it)
-                console.log(`[MetaCleaner] Stripping ${box.type} box (${box.size} bytes)`);
+            if (this._isMetadataBox(box.type) || this._isPaddingBox(box.type)) {
+                // Replace with a 'free' box of same size — zeroed content, offsets preserved
+                console.log(`[MetaCleaner] Neutralizing ${box.type} box (${box.size} bytes)`);
+                output.push(this._makeFreeBox(box.size));
             } else if (this._isContainerBox(box.type)) {
-                // Recurse: rebuild container without metadata children
+                // Recurse into container — children may contain metadata to neutralize
                 const childParts = [];
                 this._walkBoxes(bytes, pos + box.headerSize, pos + box.size, childParts, depth + 1);
-                const childBlob = new Blob(childParts);
-
-                // Rewrite container header with new size
-                const newSize = box.headerSize + childBlob.size;
-                const header = new Uint8Array(box.headerSize);
-                const hView = new DataView(header.buffer);
-                if (box.headerSize === 16) {
-                    hView.setUint32(0, 1); // marker for 64-bit
-                    header[4] = bytes[pos+4]; header[5] = bytes[pos+5];
-                    header[6] = bytes[pos+6]; header[7] = bytes[pos+7];
-                    hView.setUint32(8, Math.floor(newSize / 0x100000000));
-                    hView.setUint32(12, newSize & 0xFFFFFFFF);
-                } else {
-                    hView.setUint32(0, newSize);
-                    header[4] = bytes[pos+4]; header[5] = bytes[pos+5];
-                    header[6] = bytes[pos+6]; header[7] = bytes[pos+7];
-                }
+                // Container keeps exact same size since children are replaced, not removed
+                const header = bytes.slice(pos, pos + box.headerSize);
                 output.push(header);
                 output.push(...childParts);
             } else {
