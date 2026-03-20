@@ -9,7 +9,7 @@
 .image-card {
     position: relative;
     border-radius: var(--radius);
-    overflow: hidden;
+    overflow: visible;
     cursor: pointer;
     background: var(--bg-card);
     transition: transform 0.2s;
@@ -17,6 +17,7 @@
 
 .image-card:hover {
     transform: scale(1.02);
+    z-index: 3;
 }
 
 .image-card img {
@@ -24,6 +25,7 @@
     height: auto;
     object-fit: contain;
     display: block;
+    border-radius: var(--radius);
 }
 
 .card-placeholder {
@@ -35,6 +37,7 @@
     justify-content: center;
     color: var(--text-muted, #555);
     font-size: 1.2rem;
+    border-radius: var(--radius);
 }
 
 .card-placeholder span {
