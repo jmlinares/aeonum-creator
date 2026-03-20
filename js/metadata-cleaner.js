@@ -81,15 +81,18 @@ const MetadataCleaner = {
             if (!isImage && !isVideo) continue;
 
             let previewUrl;
+            let posterUrl = null;
             if (isImage) {
                 previewUrl = await this._fileToDataUrl(file);
             } else {
                 previewUrl = URL.createObjectURL(file);
+                posterUrl = await this._generateVideoPoster(previewUrl);
             }
 
             this.files.push({
                 file,
                 previewUrl,
+                posterUrl,
                 name: file.name,
                 size: (file.size / (1024 * 1024)).toFixed(2) + ' MB',
                 type: isImage ? 'image' : 'video',
@@ -115,6 +118,45 @@ const MetadataCleaner = {
         });
     },
 
+    _generateVideoPoster(videoUrl) {
+        return new Promise((resolve) => {
+            const video = document.createElement('video');
+            video.muted = true;
+            video.preload = 'auto';
+            video.crossOrigin = 'anonymous';
+
+            const timeout = setTimeout(() => {
+                video.removeAttribute('src');
+                video.load();
+                resolve(null);
+            }, 5000);
+
+            video.addEventListener('seeked', () => {
+                clearTimeout(timeout);
+                try {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
+                    canvas.getContext('2d').drawImage(video, 0, 0);
+                    resolve(canvas.toDataURL('image/jpeg', 0.8));
+                } catch (e) {
+                    resolve(null);
+                }
+            }, { once: true });
+
+            video.addEventListener('loadeddata', () => {
+                video.currentTime = 0.1;
+            }, { once: true });
+
+            video.addEventListener('error', () => {
+                clearTimeout(timeout);
+                resolve(null);
+            }, { once: true });
+
+            video.src = videoUrl;
+        });
+    },
+
     render() {
         const grid = document.getElementById('metaImagesGrid');
         grid.innerHTML = '';
@@ -129,8 +171,13 @@ const MetadataCleaner = {
 
             let previewHtml;
             if (item.type === 'video') {
-                previewHtml = `<video src="${item.previewUrl}" muted preload="metadata" class="meta-video-preview"></video>
-                               <div class="meta-type-badge">VIDEO</div>`;
+                if (item.posterUrl) {
+                    previewHtml = `<img src="${item.posterUrl}" alt="${item.name}">
+                                   <div class="meta-type-badge">VIDEO</div>`;
+                } else {
+                    previewHtml = `<video src="${item.previewUrl}" muted preload="metadata"></video>
+                                   <div class="meta-type-badge">VIDEO</div>`;
+                }
             } else {
                 previewHtml = `<img src="${item.previewUrl}" alt="${item.name}">`;
             }
@@ -197,6 +244,7 @@ const MetadataCleaner = {
                     if (item.previewUrl.startsWith('blob:')) URL.revokeObjectURL(item.previewUrl);
                     item.previewUrl = URL.createObjectURL(cleanedBlob);
                     item._cleanedObjUrl = item.previewUrl;
+                    item.posterUrl = await this._generateVideoPoster(item.previewUrl);
                     item.cleaned = true;
                 }
             } catch (err) {
