@@ -1,8 +1,12 @@
 /* ========== METADATA CLEANER (100% Client-Side) ========== */
-/* Supports images (EXIF strip via canvas) and videos (MP4 udta atom removal) */
+/* Supports images (EXIF strip via canvas) and videos (deep MP4 sanitization:
+   metadata atoms, encoder fingerprints, handler names, timestamps, compressor IDs) */
 
 const MetadataCleaner = {
     files: [], // { file, previewUrl, name, size, type:'image'|'video', selected, cleaned, cleanedBlob }
+
+    // MP4 epoch: seconds between 1904-01-01 and 1970-01-01
+    _MP4_EPOCH_OFFSET: 2082844800,
 
     init() {
         this.bindEvents();
@@ -337,18 +341,20 @@ const MetadataCleaner = {
     _isMetadataBox(type) {
         const strip = [
             // Standard metadata containers
-            'udta', 'meta',
+            'udta', 'meta', 'ilst', 'keys',
             // iTunes-style tags
             '\xa9nam', '\xa9ART', '\xa9alb', '\xa9cmt', '\xa9day', '\xa9too',
             '\xa9gen', '\xa9enc', '\xa9wrt', '\xa9grp', '\xa9lyr', '\xa9des',
             // Copyright / description / location
             'cprt', 'desc', 'loci', 'titl', 'auth', 'perf', 'gnre', 'dscp',
-            // XMP / UUID extensions
-            'XMP_', 'uuid',
+            // XMP / UUID extensions / ID3
+            'XMP_', 'uuid', 'ID32',
             // FFmpeg / libav specifics
             'ISFT', 'IART', 'ICMT', 'INAM', 'ISRC', 'ICRD',
             // GPS / location
             '\xa9xyz',
+            // Windows Media / Chapter markers
+            'Xtra', 'chpl',
         ];
         return strip.includes(type);
     },
@@ -420,12 +426,117 @@ const MetadataCleaner = {
                 const header = bytes.slice(pos, pos + box.headerSize);
                 output.push(header);
                 output.push(...childParts);
+            } else if (this._isPatchableBox(box.type)) {
+                // Patch specific fields (dates, encoder ID, handler names) preserving structure
+                const boxData = bytes.slice(pos, pos + box.size);
+                output.push(this._patchBox(boxData, box.type));
             } else {
                 // Non-metadata, non-container: copy as-is
                 output.push(bytes.slice(pos, pos + box.size));
             }
 
             pos += box.size;
+        }
+    },
+
+    // ===== DEEP CLEANING: field-level patching =====
+
+    // Boxes requiring field-level patching (not removal — they contain essential playback structure)
+    _isPatchableBox(type) {
+        return ['mvhd', 'tkhd', 'mdhd', 'hdlr', 'stsd'].includes(type);
+    },
+
+    // Visual codec sample entry types (contain the compressor_name field)
+    _isVisualSampleEntry(type) {
+        return ['avc1', 'avc3', 'hvc1', 'hev1', 'vp08', 'vp09', 'av01', 'mp4v'].includes(type);
+    },
+
+    // Generate a plausible MP4 timestamp (current time in MP4 epoch)
+    _generateTimestamp() {
+        return Math.floor(Date.now() / 1000) + this._MP4_EPOCH_OFFSET;
+    },
+
+    // Dispatch box patching based on type
+    _patchBox(data, type) {
+        const patched = new Uint8Array(data.length);
+        patched.set(data);
+        const view = new DataView(patched.buffer);
+
+        switch (type) {
+            case 'mvhd': this._patchDates(patched, view, 'mvhd'); break;
+            case 'tkhd': this._patchDates(patched, view, 'tkhd'); break;
+            case 'mdhd': this._patchDates(patched, view, 'mdhd'); break;
+            case 'hdlr': this._patchHdlr(patched); break;
+            case 'stsd': this._patchStsd(patched, view); break;
+        }
+
+        return patched;
+    },
+
+    // Patch creation/modification dates in mvhd, tkhd, mdhd to current time
+    _patchDates(data, view, boxType) {
+        const version = data[8];
+        const ts = this._generateTimestamp();
+
+        if (version === 0) {
+            // 32-bit timestamps at fixed offsets (same layout for mvhd, tkhd, mdhd)
+            view.setUint32(12, ts);  // creation_time
+            view.setUint32(16, ts);  // modification_time
+        } else {
+            // 64-bit timestamps (version 1)
+            view.setUint32(12, 0);   // creation_time high word
+            view.setUint32(16, ts);  // creation_time low word
+            view.setUint32(20, 0);   // modification_time high word
+            view.setUint32(24, ts);  // modification_time low word
+        }
+        console.log(`[MetaCleaner] Patched ${boxType} dates`);
+    },
+
+    // Patch handler name in hdlr box — removes "VideoHandler"/"SoundHandler" FFmpeg fingerprint
+    _patchHdlr(data) {
+        // hdlr layout: box_header(8) + version+flags(4) + pre_defined(4) +
+        //              handler_type(4, 'vide'/'soun') + reserved(12) + name(variable)
+        // handler_type at offset 16-19 is preserved, name from offset 32 onwards is zeroed
+        if (data.length > 33) {
+            for (let i = 32; i < data.length; i++) {
+                data[i] = 0;
+            }
+            console.log('[MetaCleaner] Patched hdlr handler name');
+        }
+    },
+
+    // Patch sample entries within stsd box — zeros compressor_name in video codec entries
+    _patchStsd(data, view) {
+        // stsd (FullBox): header(8) + version+flags(4) + entry_count(4) → entries at offset 16
+        let headerSize = 8;
+        if (view.getUint32(0) === 1) headerSize = 16; // 64-bit extended size
+
+        const entriesStart = headerSize + 4 + 4;
+        if (data.length <= entriesStart + 8) return;
+
+        // Walk sample entries within stsd
+        let pos = entriesStart;
+        while (pos + 8 <= data.length) {
+            const entrySize = view.getUint32(pos);
+            if (entrySize < 8 || pos + entrySize > data.length) break;
+
+            const entryType = String.fromCharCode(data[pos+4], data[pos+5], data[pos+6], data[pos+7]);
+
+            if (this._isVisualSampleEntry(entryType)) {
+                // VisualSampleEntry layout: box_header(8) + reserved(6) + data_ref_idx(2) +
+                //   pre_defined(2) + reserved(2) + pre_defined(12) + width(2) + height(2) +
+                //   horiz_res(4) + vert_res(4) + reserved(4) + frame_count(2) +
+                //   compressor_name(32 @ offset 50) + depth(2) + pre_defined(2)
+                const nameOffset = pos + 50;
+                if (nameOffset + 32 <= data.length) {
+                    for (let i = 0; i < 32; i++) {
+                        data[nameOffset + i] = 0;
+                    }
+                    console.log(`[MetaCleaner] Patched compressor_name in ${entryType}`);
+                }
+            }
+
+            pos += entrySize;
         }
     }
 };
