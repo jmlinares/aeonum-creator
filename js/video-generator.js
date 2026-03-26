@@ -37,6 +37,7 @@ const VideoGenerator = {
             'veo-3.1-fast-image-to-video':  { badge: 'I2V',  name: 'Veo 3.1 Fast - Image to Video' },
             'veo-3.1-reference-to-video':   { badge: 'REF',  name: 'Veo 3.1 - Reference to Video' },
             'sora-2-image-to-video':        { badge: 'SORA', name: 'Sora 2 - Image to Video' },
+            'kling-3.0-pro-text-to-video':  { badge: 'K3T',  name: 'Kling 3.0 Pro - Text to Video' },
             'kling-3.0-pro-image-to-video': { badge: 'K3P',  name: 'Kling 3.0 Pro - Image to Video' },
             'kling-2.6-pro-text-to-video':  { badge: 'K2T',  name: 'Kling 2.6 Pro - Text to Video' },
             'kling-2.6-pro-image-to-video': { badge: 'K26',  name: 'Kling 2.6 Pro - Image to Video' },
@@ -305,7 +306,7 @@ const VideoGenerator = {
                 <option value="5" selected>5 segundos</option>
                 <option value="10">10 segundos</option>
             `;
-        } else if (modelId === 'kling-3.0-pro-image-to-video') {
+        } else if (modelId === 'kling-3.0-pro-text-to-video' || modelId === 'kling-3.0-pro-image-to-video') {
             durationSelect.innerHTML = `
                 <option value="3">3 segundos</option>
                 <option value="5" selected>5 segundos</option>
@@ -531,6 +532,20 @@ const VideoGenerator = {
                 } else {
                     throw new Error('Upload a motion reference video first.');
                 }
+
+            } else if (modelId === 'kling-3.0-pro-text-to-video') {
+                // Kling 3.0 Pro T2V: prompt, duration (3-15), cfg_scale, sound, aspect_ratio, shot_type, element_list
+                params = {
+                    prompt: audio ? prompt + `\nSample Dialogue:\n${audio}` : prompt,
+                    duration: duration,
+                    cfg_scale: 0.5,
+                    sound: true,
+                    aspect_ratio: aspect,
+                    shot_type: 'customize',
+                    element_list: [],
+                    multi_prompt: [],
+                };
+                if (negPrompt) params.negative_prompt = negPrompt;
 
             } else if (modelId === 'kling-3.0-pro-image-to-video') {
                 // Kling 3.0 Pro: image, prompt, duration (3-15), cfg_scale, sound
