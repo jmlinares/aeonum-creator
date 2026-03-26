@@ -38,6 +38,7 @@ const VideoGenerator = {
             'veo-3.1-reference-to-video':   { badge: 'REF',  name: 'Veo 3.1 - Reference to Video' },
             'sora-2-image-to-video':        { badge: 'SORA', name: 'Sora 2 - Image to Video' },
             'kling-3.0-pro-image-to-video': { badge: 'K3P',  name: 'Kling 3.0 Pro - Image to Video' },
+            'kling-2.6-pro-text-to-video':  { badge: 'K2T',  name: 'Kling 2.6 Pro - Text to Video' },
             'kling-2.6-pro-image-to-video': { badge: 'K26',  name: 'Kling 2.6 Pro - Image to Video' },
             'kling-2.6-pro-motion-control': { badge: 'MOT',  name: 'Kling 2.6 Pro - Motion Control' },
             'kling-3.0-std-motion-control': { badge: 'M30',  name: 'Kling 3.0 Std - Motion Control' },
@@ -299,7 +300,7 @@ const VideoGenerator = {
         }
 
         // Update duration options based on model
-        if (modelId === 'kling-2.6-pro-image-to-video') {
+        if (modelId === 'kling-2.6-pro-text-to-video' || modelId === 'kling-2.6-pro-image-to-video') {
             durationSelect.innerHTML = `
                 <option value="5" selected>5 segundos</option>
                 <option value="10">10 segundos</option>
@@ -416,6 +417,17 @@ const VideoGenerator = {
                         params.image = this.sourceImageData;
                     }
                 }
+            } else if (modelId === 'kling-2.6-pro-text-to-video') {
+                // Kling 2.6 Pro T2V: prompt, duration (5/10), cfg_scale, sound, aspect_ratio
+                params = {
+                    prompt: audio ? prompt + `\nSample Dialogue:\n${audio}` : prompt,
+                    duration: duration,
+                    cfg_scale: 0.5,
+                    sound: true,
+                    aspect_ratio: aspect,
+                };
+                if (negPrompt) params.negative_prompt = negPrompt;
+
             } else if (modelId === 'kling-2.6-pro-image-to-video') {
                 // Kling 2.6 Pro: image, prompt, duration (5/10), cfg_scale, sound, voice_list
                 params = {
