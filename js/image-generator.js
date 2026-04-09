@@ -13,13 +13,22 @@ const ImageGenerator = {
     _scrollObserver: null, // IntersectionObserver for infinite scroll sentinel
 
     async init() {
-        // Try loading from Firebase first, fallback to localStorage
+        // Merge Firebase + localStorage so no images are lost
         const firebaseImages = await FirebaseSync.loadImageHistory();
+        const localImages = Storage.getImageHistory();
         if (firebaseImages.length > 0) {
-            this.generatedImages = firebaseImages;
-            Storage.set('image_history', firebaseImages);
+            // Merge: add local-only images that are missing from Firebase
+            const fbIds = new Set(firebaseImages.map(i => i.id));
+            const localOnly = localImages.filter(i => !fbIds.has(i.id));
+            this.generatedImages = [...firebaseImages, ...localOnly]
+                .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+            Storage.set('image_history', this.generatedImages);
+            // Sync local-only images back to Firebase
+            for (const img of localOnly) {
+                FirebaseSync.saveImageRecord(img);
+            }
         } else {
-            this.generatedImages = Storage.getImageHistory();
+            this.generatedImages = localImages;
         }
         this.renderGrid();
         this.loadModelState();

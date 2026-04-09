@@ -9,12 +9,20 @@ const VideoGenerator = {
     generatedVideos: [],
 
     async init() {
+        // Merge Firebase + localStorage so no videos are lost
         const firebaseVideos = await FirebaseSync.loadVideoHistory();
+        const localVideos = Storage.getVideoHistory();
         if (firebaseVideos.length > 0) {
-            this.generatedVideos = firebaseVideos;
-            Storage.set('video_history', firebaseVideos);
+            const fbIds = new Set(firebaseVideos.map(v => v.id));
+            const localOnly = localVideos.filter(v => !fbIds.has(v.id));
+            this.generatedVideos = [...firebaseVideos, ...localOnly]
+                .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+            Storage.set('video_history', this.generatedVideos);
+            for (const vid of localOnly) {
+                FirebaseSync.saveVideoRecord(vid);
+            }
         } else {
-            this.generatedVideos = Storage.getVideoHistory();
+            this.generatedVideos = localVideos;
         }
         this.renderGrid();
         this.loadModelState();
